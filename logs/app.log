@@ -1,0 +1,90 @@
+2025-11-22 18:38:55,378 | INFO | app.request | - | [START] POST /analyze/
+2025-11-22 18:38:57,635 | ERROR | app.services.food_classifier | - | [Classifier] RAW OUTPUT:
+```json
+{
+  "type": "packaged"
+}
+```
+2025-11-22 18:38:57,637 | ERROR | app.services.food_classifier | - | [Classifier] CLEANED JSON:
+{
+  "type": "packaged"
+}
+2025-11-22 18:39:05,668 | ERROR | app.services.gemini_client | - | RAW GEMINI OUTPUT:
+{
+  "type": "packaged",
+  "items": [
+    {
+      "food_name": "Vanilla Cupcake",
+      "serving_description": "1 cupcake",
+      "calories": 100,
+      "protein_grams": 1,
+      "carb_grams": 15,
+      "fat_grams": 4,
+      "confidence_level": "Low"
+    }
+  ],
+  "overall_confidence": "High"
+}
+2025-11-22 18:39:05,669 | ERROR | app.services.gemini_client | - | CLEANED JSON CANDIDATE:
+{
+  "type": "packaged",
+  "items": [
+    {
+      "food_name": "Vanilla Cupcake",
+      "serving_description": "1 cupcake",
+      "calories": 100,
+      "protein_grams": 1,
+      "carb_grams": 15,
+      "fat_grams": 4,
+      "confidence_level": "Low"
+    }
+  ],
+  "overall_confidence": "High"
+}
+2025-11-22 18:39:05,682 | INFO | app.request | - | [END] POST /analyze/ → 200
+2025-11-22 18:39:05,684 | INFO | root | - | POST /analyze/ completed in 10304.53 ms
+2025-11-22 18:45:42,053 | INFO | app.request | - | [START] POST /analyze/
+2025-11-22 18:45:44,412 | ERROR | app.services.food_classifier | - | [Classifier] RAW OUTPUT:
+```json
+{
+  "type": "packaged"
+}
+```
+2025-11-22 18:45:44,412 | ERROR | app.services.food_classifier | - | [Classifier] CLEANED JSON:
+{
+  "type": "packaged"
+}
+2025-11-22 18:45:53,729 | ERROR | app.services.gemini_client | - | RAW GEMINI OUTPUT:
+{
+  "type": "packaged",
+  "items": [
+    {
+      "food_name": "Vanilla Cupcake",
+      "serving_description": "1 cupcake",
+      "calories": 120,
+      "protein_grams": 2,
+      "carb_grams": 20,
+      "fat_grams": 7,
+      "confidence_level": "High"
+    }
+  ],
+  "overall_confidence": "High"
+}
+2025-11-22 18:45:53,733 | ERROR | app.services.gemini_client | - | CLEANED JSON CANDIDATE:
+{
+  "type": "packaged",
+  "items": [
+    {
+      "food_name": "Vanilla Cupcake",
+      "serving_description": "1 cupcake",
+      "calories": 120,
+      "protein_grams": 2,
+      "carb_grams": 20,
+      "fat_grams": 7,
+      "confidence_level": "High"
+    }
+  ],
+  "overall_confidence": "High"
+}
+2025-11-22 18:45:53,738 | INFO | app.request | - | [END] POST /analyze/ → 200
+2025-11-22 18:45:53,738 | INFO | root | - | POST /analyze/ completed in 11688.89 ms
