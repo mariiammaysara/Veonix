@@ -1,9 +1,10 @@
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
+sys.path.append(BASE_DIR)
 
-from backend.app.main import app
+from app.main import app
 from mangum import Mangum
 
 handler = Mangum(app)
