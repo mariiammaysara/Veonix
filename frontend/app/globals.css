@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Custom Colors as CSS Variables */
+:root {
+  --bg-dark1: #0f172a;
+  --bg-dark2: #020617;
+
+  --brand-emerald-400: #34d399;
+  --brand-emerald-500: #10b981;
+  --brand-emerald-600: #059669;
+
+  --text-heading: #f8fafc;
+  --text-normal: #e2e8f0;
+  --text-sub: #94a3b8;
+
+  --border-line: #334155;
+
+  --card-soft: rgba(30, 41, 59, 0.4);
+  --card-softer: rgba(30, 41, 59, 0.6);
+}

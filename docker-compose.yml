@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: veonix-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    # Volume to keep the database persistent on your computer
+    volumes:
+      - ./backend/food_app.db:/app/food_app.db
+
+  frontend:
+    build: ./frontend
+    container_name: veonix-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
