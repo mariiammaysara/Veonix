@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://veonix-api.onrender.com";
 
 export async function analyzeImage(file: File) {
   const form = new FormData();
