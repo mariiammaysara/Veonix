@@ -266,8 +266,163 @@ Once the containers are healthy, you can access the application at:
 5. **Results Display**  
    The frontend renders the nutritional breakdown and updates the meal history in real time.
 
+## Usage
+
+Once the application is running, follow these steps to analyze your meals and track your nutrition:
+
+### 1. Analyze a Meal
+1. Open the **Veonix** dashboard in your browser (`http://localhost:3000`).
+2. Navigate to the **Upload** page.
+3. Drag and drop an image of your food or click the upload area to select a file from your device.
+4. Click the **Analyze** button.
+5. Wait for the **Gemini 2.0 Flash** model to identify the food and calculate the nutritional breakdown.
+
+### 2. View Results
+* **Nutritional Summary:** View total calories and a detailed breakdown of macronutrients (Protein, Carbs, and Fats).
+* **AI Insights:** The system identifies the specific name of the food items detected in the image.
 
 
+
+### 3. Track History
+1. Navigate to the **History** tab in the sidebar.
+2. Browse through your previous meal analyses stored in the local database.
+3. Use the history to monitor your eating habits over time.
+4. (Optional) Use the delete function to remove entries you no longer wish to track.
+
+### 4. Developer Tools (API Docs)
+If you are a developer looking to integrate with the backend:
+* Visit `http://localhost:8000/docs` to access the interactive **Swagger UI**.
+* You can test the endpoints manually by uploading images via the `/analyze/image` route.
+
+## Configuration
+
+To run **Veonix** properly, you must configure the environment variables for both the backend and frontend.
+
+### Backend Configuration
+The backend requires a `.env` file located in the `/backend` directory. This file handles sensitive API keys and database connections.
+
+| Variable | Description | Default/Example |
+| :--- | :--- | :--- |
+| `GEMINI_API_KEY` | Your Google AI Studio API Key | `AIzaSy...` |
+| `DATABASE_URL` | SQLAlchemy connection string | `sqlite:///./food_app.db` |
+| `LOG_LEVEL` | Level of logging detail | `INFO` |
+
+### Frontend Configuration
+The frontend uses an `.env.local` file located in the `/frontend` directory to communicate with the backend API.
+
+| Variable | Description | Default/Example |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_API_URL` | The URL of your FastAPI backend | `http://localhost:8000` |
+
+---
+
+### Google Gemini API Setup
+1. Visit [Google AI Studio](https://aistudio.google.com/).
+2. Create a new API Key.
+3. Ensure the key has permissions for the **gemini-3-flash-preview** model.
+4. Paste the key into your backend `.env` file.
+
+---
+
+### Docker Configuration
+If you are modifying the deployment, the `docker-compose.yml` file at the root handles the networking between services.
+* **Backend Port:** Internal `8000` mapped to External `8000`.
+* **Frontend Port:** Internal `3000` mapped to External `3000`.
+* **Network:** Both services share a custom bridge network to allow the frontend to resolve the backend container by its service name.
+
+## UI Features
+
+Veonix features a clean, high-performance user interface designed for a seamless user experience across all devices.
+
+###  Design & Layout
+* **Modern Dashboard:** A sleek, minimal dashboard layout for easy navigation.
+* **Responsive Design:** Fully optimized for Mobile, Tablet, and Desktop views using Tailwind CSS.
+* **Sidebar Navigation:** Organized sidebar for quick access to Upload, History, and Settings.
+* **Dynamic Logo:** Custom-branded Veonix logo integrated into the header.
+
+###  Interaction Features
+* **Smart Upload Box:** Supports drag-and-drop functionality with real-time file type validation.
+* **Live Image Preview:** Displays the selected image instantly before processing to ensure accuracy.
+* **Loading States:** Interactive progress indicators while the Gemini AI analyzes the meal.
+* **Actionable Sidebar:** Collapsible navigation to maximize workspace during analysis.
+
+###  Data Visualization
+* **Nutritional Cards:** Clean cards displaying Calories, Protein, Carbs, and Fats.
+* **History Table:** A structured data table to review past meals with delete and view capabilities.
+* **Interactive Charts:** Visual representation of macronutrient ratios for better insight.
+* **Error Handling:** Friendly UI notifications for invalid uploads or API timeouts.
+
+---
+
+### UI Components Gallery
+| Component | Description |
+| :--- | :--- |
+| **`upload-box.tsx`** | Handles file selection and drag-drop events. |
+| **`results-display.tsx`** | Renders the AI's nutritional breakdown. |
+| **`data-table.tsx`** | Manages the display and filtering of meal history. |
+| **`app-sidebar.tsx`** | The main navigation hub for the application. |
+## Contributing
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+### How to Contribute
+
+1. **Fork the Project**
+   Click the 'Fork' button at the top of this repository to create your own copy.
+
+2. **Create your Feature Branch**
+   ```powershell
+   git checkout -b feature/AmazingFeature
+      ```
+3. **Commit your Changes**
+   ```powershell
+   git commit -m 'Add some AmazingFeature'
+      ```
+4. **Push to the Branch**
+```powershell
+git push origin feature/AmazingFeature
+ ```
+5. Open a Pull Request Open a PR from your fork's branch to the original repository's main branch
+
+## Core Technologies
+
+Veonix is built using a modern, scalable stack designed for high performance and seamless AI integration.
+
+### Frontend (User Interface)
+* **Framework:** **Next.js 15** (App Router) for server-side rendering and optimized performance.
+* **Styling:** **Tailwind CSS** for a responsive, utility-first design system.
+* **Components:** **Shadcn/UI** & **Lucide React** for high-quality, accessible UI elements.
+* **Language:** **TypeScript** for robust, type-safe development.
+
+### Backend (API & Logic)
+* **Framework:** **FastAPI** (Python) for building high-performance, asynchronous APIs.
+* **AI Engine:** **Google gemini-3-flash-preview** for advanced image recognition and nutritional analysis.
+* **Database:** **SQLite** with **SQLAlchemy ORM** for efficient data persistence and history tracking.
+* **Validation:** **Pydantic** for rigorous data validation and settings management.
+
+### Infrastructure & DevOps
+* **Containerization:** **Docker & Docker Compose** for consistent environment orchestration.
+* **Deployment:** **Render** for reliable cloud hosting of both frontend and backend services.
+* **API Documentation:** **Swagger UI** for interactive API testing and documentation.
+* **Code Quality:** **Ruff** for ultra-fast Python linting and formatting.
+
+---
+
+### Why this stack?
+- **FastAPI + Gemini:** Provides near-instant AI responses using asynchronous processing.
+- **Next.js 15:** Ensures the dashboard is fast, SEO-friendly, and provides a smooth SPA-like experience.
+- **Docker:** Guarantees that the app runs exactly the same way on your local machine as it does on the Render production server.
+
+##  License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+<div align="center">
+
+**Developed with by [Mariam Maysara](https://github.com/mariiammaysara)**
+
+</div>
 
 
 
