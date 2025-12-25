@@ -372,15 +372,15 @@ Contributions are what make the open-source community such an amazing place to l
 
 2. **Create your Feature Branch**
    ```powershell
-   git checkout -b feature/AmazingFeature
+   git checkout -b feature/NewFeature
       ```
 3. **Commit your Changes**
    ```powershell
-   git commit -m 'Add some AmazingFeature'
+   git commit -m 'Add some NewFeature'
       ```
 4. **Push to the Branch**
 ```powershell
-git push origin feature/AmazingFeature
+git push origin feature/NewFeature
  ```
 5. Open a Pull Request Open a PR from your fork's branch to the original repository's main branch
 
@@ -423,6 +423,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 **Developed with by [Mariam Maysara](https://github.com/mariiammaysara)**
 
 </div>
+
 
 
 
