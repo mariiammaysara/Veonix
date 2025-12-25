@@ -406,12 +406,6 @@ Veonix is built using a modern, scalable stack designed for high performance and
 * **API Documentation:** **Swagger UI** for interactive API testing and documentation.
 * **Code Quality:** **Ruff** for ultra-fast Python linting and formatting.
 
----
-
-### Why this stack?
-- **FastAPI + Gemini:** Provides near-instant AI responses using asynchronous processing.
-- **Next.js 15:** Ensures the dashboard is fast, SEO-friendly, and provides a smooth SPA-like experience.
-- **Docker:** Guarantees that the app runs exactly the same way on your local machine as it does on the Render production server.
 
 ##  License
 
@@ -423,6 +417,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 **Developed with by [Mariam Maysara](https://github.com/mariiammaysara)**
 
 </div>
+
 
 
 
