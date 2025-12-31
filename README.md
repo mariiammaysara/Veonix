@@ -414,9 +414,10 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 <div align="center">
 
-**Developed with by [Mariam Maysara](https://github.com/mariiammaysara)**
+**Developed by [Mariam Maysara](https://github.com/mariiammaysara)**
 
 </div>
+
 
 
 
