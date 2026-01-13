@@ -8,7 +8,7 @@
 
 ## Introduction
 
-**Veonix** is not just a calorie tracker; it is an intelligent dietary companion. By leveraging **Google Gemini 1.5**, Veonix "sees" your food, identifying complex dishes, estimating portion sizes, and calculating macronutrients with remarkable accuracy. 
+**Veonix** is not just a calorie tracker; it is an intelligent dietary companion. By leveraging **Google Gemini 3**, Veonix "sees" your food, identifying complex dishes, estimating portion sizes, and calculating macronutrients with remarkable accuracy. 
 
 Designed for bio-hackers, fitness enthusiasts, and anyone who wants frictionless health tracking, Veonix replaces tedious manual logging with a single photo.
 
