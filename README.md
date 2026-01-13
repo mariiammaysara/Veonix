@@ -138,7 +138,7 @@ veonix/
 | **Frontend** | [Next.js 16](https://nextjs.org/) | React 19, App Router, Server Actions |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) | Utility-first CSS, Animations |
 | **Backend** | [FastAPI](https://fastapi.tiangolo.com/) | High-performance Python API |
-| **AI Model** | [Google Gemini 1.5](https://deepmind.google/technologies/gemini/) | Multimodal Vision Model |
+| **AI Model** | [Google Gemini 3](https://deepmind.google/technologies/gemini/) | Multimodal Vision Model |
 | **Database** | SQLite | Lightweight, serverless storage |
 | **Infrastructure** | Docker | Containerization & Orchestration |
 
