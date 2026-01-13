@@ -29,6 +29,17 @@ Designed for bio-hackers, fitness enthusiasts, and anyone who wants frictionless
 - **Interactive UI**: Fluid animations and real-time feedback with Radix UI.
 - **Dark Mode Native**: Optimized for visual comfort in all lighting conditions.
 
+### Design System
+
+A carefully curated palette designed to evoke precision and health.
+
+| Color | Hex | Usage |
+| :--- | :--- | :--- |
+| ![#0f172a](https://placehold.co/15x15/0f172a/0f172a.png) **Deep Slate** | `#0f172a` | Primary Background / Canvas |
+| ![#10b981](https://placehold.co/15x15/10b981/10b981.png) **Emerald** | `#10b981` | Brand Identity / Success States |
+| ![#e2e8f0](https://placehold.co/15x15/e2e8f0/e2e8f0.png) **Slate Mist** | `#e2e8f0` | Typography / Primary Text |
+| ![#1e293b](https://placehold.co/15x15/1e293b/1e293b.png) **Dark Lvl 2** | `#1e293b` | Cards / Elevated Surfaces |
+
 ## System Architecture
 
 Veonix utilizes a modern, decoupled architecture designed for speed and scalability. The workflow begins when a user uploads an image through the Next.js Client. This request is handled by the FastAPI Backend, which acts as the secure orchestrator. The backend pre-processes the image and sends it to the Google Gemini Vision API for high-level nutritional analysis. The raw AI response is then normalized into structured JSON data and stored in the SQLite database before being returned to the frontend for visualization.
