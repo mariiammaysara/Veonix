@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any
-from app.core.services.gemini_client import GeminiClient
+from app.core.services.food_analysis import FoodAnalyzer
 from app.core.services.nutrition_normalizer import NutritionNormalizer
 
 # Initialize logger for service tracking
@@ -12,20 +12,20 @@ class NutritionService:
         Initializes the NutritionService by connecting the AI Client 
         and the Normalizer tool.
         """
-        self.ai_client = GeminiClient()
+        self.ai_client = FoodAnalyzer()
         self.normalizer = NutritionNormalizer()
 
     async def get_nutritional_analysis(self, image_bytes: bytes, mime_type: str) -> Dict[str, Any]:
         """
         Orchestrates the flow: 
-        1. Sends image to Gemini for raw AI analysis.
+        1. Sends image to the vision model for raw AI analysis.
         2. Passes raw data to the Normalizer to ensure numeric consistency.
         3. Returns a clean, validated dictionary.
         """
         try:
             logger.info("Starting nutritional analysis process...")
 
-            # Step 1: Get raw analysis from Gemini AI
+            # Step 1: Get raw analysis from vision model
             raw_analysis = await self.ai_client.analyze_food_image(image_bytes, mime_type)
             
             # Step 2: Normalize and clean the data (Fixing types, rounding numbers)

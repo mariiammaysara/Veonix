@@ -9,10 +9,11 @@ class Settings(BaseSettings):
     app_name: str = "Veonix"
     debug: bool = False
 
-    # Gemini
-    gemini_api_key: str
+
+
 
     # Optional environment config (from .env)
+    hf_token: str
     environment: str = "development"
     log_level: str = "INFO"
 

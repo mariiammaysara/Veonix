@@ -12,7 +12,7 @@ class NutritionNormalizer:
     @staticmethod
     def normalize_analysis_result(raw_data: dict) -> dict:
         """
-        Cleans and formats the raw JSON dictionary from Gemini.
+        Cleans and formats the raw JSON dictionary from the vision model.
         Ensures calories and macros are numeric values.
         """
         try:

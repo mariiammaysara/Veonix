@@ -1,5 +1,13 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://veonix-api.onrender.com";
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 export async function analyzeImage(file: File) {
   const form = new FormData();
   form.append("file", file);
@@ -11,42 +19,16 @@ export async function analyzeImage(file: File) {
 
   if (!resp.ok) {
     const text = await resp.text();
+    let message = "Analysis failed";
     try {
       const j = JSON.parse(text);
-      throw new Error(j.detail || "Analysis failed");
+      message = j.detail || message;
     } catch {
-      throw new Error(text || "Network error");
+      message = text || message;
     }
+    throw new ApiError(message, resp.status);
   }
 
   return await resp.json();
 }
 
-export async function getMealHistory(limit: number = 10) {
-  const resp = await fetch(`${BASE_URL}/analyze/history?limit=${limit}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(text || "Could not fetch history");
-  }
-
-  return await resp.json();
-}
-
-export async function deleteMeal(id: number) {
-  const resp = await fetch(`${BASE_URL}/analyze/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(text || "Failed to delete meal");
-  }
-
-  return true;
-}

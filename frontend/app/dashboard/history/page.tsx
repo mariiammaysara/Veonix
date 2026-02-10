@@ -1,141 +1,169 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMealHistory, deleteMeal } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Utensils, Flame, Trash2 } from "lucide-react";
+
+// History Key for LocalStorage (must match UploadPage)
+const HISTORY_KEY = "veonix_meal_history";
 
 export default function HistoryPage() {
+  const router = useRouter();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getMealHistory()
-      .then((data) => setHistory(data))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        router.push("/");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [router]);
+
+  useEffect(() => {
+    // Load from LocalStorage
+    try {
+      const existing = localStorage.getItem(HISTORY_KEY);
+      if (existing) {
+        setHistory(JSON.parse(existing));
+      }
+    } catch (e) {
+      console.error("Failed to load history", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleDelete = async (id: number) => {
-    if (!id) return;
+  const handleDelete = (id: number | string) => { // ID might be string or number depending on backend response vs generated
+    if (!id) {
+      // Fallback for items without ID (generated purely on frontend?)
+      // If no ID, we might need a different way to identify, but let's assume analyze returns an ID or we should generate one.
+      // Actually, the backend still returns an ID. If we use that, good.
+      // If we decide to support fully offline later, we'd need frontend IDs.
+      // For now, let's filter by index if needed, but standard is ID.
+      return;
+    }
+
     try {
-      await deleteMeal(id);
-      setHistory((prev) => prev.filter((meal) => meal.id !== id));
+      const updated = history.filter((meal) => meal.id !== id);
+      setHistory(updated);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
     } catch (err) {
-      console.error("Delete failed:", err);
+      console.error("Delete failed locally:", err);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#020617] text-slate-100 p-6 md:p-8 relative overflow-hidden">
-      
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[120px] animate-pulse"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse"></div>
+    <div className="min-h-screen w-full bg-[#020617] text-slate-100 p-4 md:p-6 relative overflow-hidden flex flex-col items-center">
 
-      <div className="max-w-6xl mx-auto relative z-10 mb-10">
-        <div className="flex justify-between items-center mb-6">
-          <Link 
-            href="/" 
-            className="flex items-center gap-2 text-slate-400 hover:text-emerald-400 transition-colors group"
+      {/* Background Aurora Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
+
+      <div className="w-full max-w-[1100px] relative z-10 flex-1 flex flex-col">
+
+        {/* Header */}
+        <div className="flex flex-col items-center justify-center mb-12 relative">
+          <Link
+            href="/"
+            className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-400 hover:text-emerald-400 transition-colors group px-3 py-2 rounded-full hover:bg-slate-800/50"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-medium">Back</span>
+            <span className="hidden sm:inline text-sm font-medium">Home</span>
           </Link>
 
-          <div className="flex items-center gap-2 group">
-            <svg className="group-hover:rotate-12 transition-transform duration-300" width="24" height="24" viewBox="0 0 100 100" fill="none">
-              <path d="M20 75 L50 20 L80 75" stroke="#34d399" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="50" cy="55" r="6" fill="#10b981" />
-            </svg>
-            <span className="text-lg font-bold tracking-[0.2em] uppercase text-slate-100">Veonix</span>
+          <div className="flex flex-col items-center">
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
+              Your Meal History
+            </h1>
+            {/* Gradient Underline */}
+            <div className="h-1 w-24 bg-gradient-to-r from-emerald-500/0 via-emerald-500/50 to-emerald-500/0 rounded-full"></div>
           </div>
-          
-          <div className="w-12 hidden md:block"></div>
         </div>
 
-        <div className="text-center animate-in fade-in slide-in-from-top duration-700">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">
-            Your Meal History
-          </h1>
-          <div className="h-1 w-24 bg-gradient-to-r from-emerald-500/40 to-transparent mx-auto mt-4 rounded-full"></div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-           <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-        </div>
-      ) : history.length === 0 ? (
-        <div className="text-center py-20 animate-in fade-in duration-1000 relative z-10">
-          <p className="text-slate-500 text-lg mb-4">No meals found in your history.</p>
-          <Link 
-            href="/dashboard/upload" 
-            className="text-emerald-400 hover:text-emerald-300 underline underline-offset-4 font-medium transition-colors"
-          >
-            Analyze your first meal
-          </Link>
-        </div>
-      ) : (
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-          {history.map((meal: any, index: number) => (
-            <div 
-              key={meal.id || index} 
-              style={{ animationDelay: `${index * 100}ms` }}
-              className="bg-[#0f172a]/40 border border-slate-800 rounded-[2rem] p-6 backdrop-blur-xl relative group 
-                         hover:border-emerald-500/40 hover:bg-[#0f172a]/60 hover:scale-[1.02] 
-                         hover:shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all duration-500 
-                         animate-in fade-in zoom-in duration-700"
-            >
-              
-              <div className="flex justify-between items-center mb-4">
-                <span className="px-3 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20 uppercase tracking-widest group-hover:bg-emerald-500 group-hover:text-black transition-colors duration-500">
-                  Meal
-                </span>
-                <button 
-                  onClick={() => handleDelete(meal.id)}
-                  className="text-slate-600 hover:text-red-400 transition-colors text-sm transform hover:rotate-90 duration-300"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <h3 className="text-xl font-bold text-center text-slate-100 mb-6 tracking-tight uppercase group-hover:text-emerald-400 transition-colors">
-                {meal.food_name}
-              </h3>
-
-              <div className="space-y-4">
-                <div className="text-center relative">
-                  <span className="text-4xl font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.6)] transition-all">
-                    {meal.calories}
-                  </span>
-                  <span className="text-slate-500 text-xs ml-1 font-black uppercase tracking-tighter">kcal</span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 border-t border-slate-800/60 pt-6">
-                  {[
-                    { label: 'Protein', val: meal.macros?.protein },
-                    { label: 'Carbs', val: meal.macros?.carbs },
-                    { label: 'Fat', val: meal.macros?.fat }
-                  ].map((macro) => (
-                    <div key={macro.label} className="text-center">
-                      <p className="text-emerald-400 font-black text-base group-hover:scale-110 transition-transform">{macro.val || 0}g</p>
-                      <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-0.5">{macro.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-6 text-center pt-3 border-t border-slate-800/30">
-                <span className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em] group-hover:text-slate-400 transition-colors">
-                   {meal.created_at 
-                     ? new Date(meal.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) 
-                     : "Recent Meal"}
-                </span>
-              </div>
+        {/* Content */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-slate-800/40 rounded-2xl h-64 border border-white/5"></div>
+            ))}
+          </div>
+        ) : history.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
+            <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
+              <Utensils className="w-8 h-8 text-emerald-500/60" />
             </div>
-          ))}
-        </div>
-      )}
+            <h2 className="text-xl font-semibold text-white mb-2">No meals yet</h2>
+            <p className="text-slate-400 mb-8 max-w-xs mx-auto">
+              Analyze your first meal to see it here
+            </p>
+            <Link
+              href="/dashboard/upload"
+              className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-transform hover:scale-105"
+            >
+              Analyze Meal
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+            {history.map((meal, index) => (
+              <div
+                key={meal.id || index}
+                className="bg-slate-900/40 border border-slate-800 backdrop-blur-sm rounded-2xl p-5 hover:border-emerald-500/20 transition-all group relative"
+              >
+                {/* Delete Action */}
+                <button
+                  onClick={() => handleDelete(meal.id)}
+                  className="absolute top-4 right-4 text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-800 rounded-full"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <Utensils className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <div className="pr-6">
+                    <h3 className="text-lg font-semibold text-slate-200 line-clamp-1 min-h-[1.75rem]" title={meal.food_name}>
+                      {meal.food_name || "Unknown Meal"}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Flame className="w-3.5 h-3.5 text-orange-400" />
+                      <span className="text-sm font-medium text-slate-300">
+                        {meal.calories} <span className="text-slate-500 font-normal">kcal</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mt-auto">
+                  {/* Protein */}
+                  <div className="bg-slate-950/50 rounded-lg p-2 text-center border border-slate-800/50">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Prot</p>
+                    <p className="text-sm font-semibold text-slate-300">{meal.macros?.protein || 0}g</p>
+                  </div>
+                  {/* Carbs */}
+                  <div className="bg-slate-950/50 rounded-lg p-2 text-center border border-slate-800/50">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Carb</p>
+                    <p className="text-sm font-semibold text-slate-300">{meal.macros?.carbs || 0}g</p>
+                  </div>
+                  {/* Fat */}
+                  <div className="bg-slate-950/50 rounded-lg p-2 text-center border border-slate-800/50">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Fat</p>
+                    <p className="text-sm font-semibold text-slate-300">{meal.macros?.fat || 0}g</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

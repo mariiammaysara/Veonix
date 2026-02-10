@@ -28,13 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </main>
 
         {/* FOOTER FIXED AT BOTTOM */}
-        <footer className="py-6 text-center mt-auto">
-          <p className="text-slate-400/70 text-sm italic tracking-wide">
-            Developed by{" "}
-            <span className="text-emerald-400/90 font-semibold italic">
-              Mariam Maysara
-            </span>
-          </p>
+        <footer className="w-full text-center py-6 text-sm text-gray-400">
+          Developed by{" "}
+          <span className="text-emerald-400 font-medium">
+            Mariam Maysara
+          </span>
         </footer>
       </body>
     </html>

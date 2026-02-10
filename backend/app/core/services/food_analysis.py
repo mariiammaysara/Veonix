@@ -1,30 +1,36 @@
-from google import genai
-from google.genai import types
+
 import json
-import io
 import logging
+import base64
+import io
 from PIL import Image
-from app.core.config import get_settings
+from app.core.services.vision import analyze_image
 
 logger = logging.getLogger(__name__)
 
-class GeminiClient:
+class FoodAnalyzer:
     def __init__(self) -> None:
-        settings = get_settings()
-        api_key = settings.gemini_api_key.strip().replace('"', '').replace("'", "")
-        self.client = genai.Client(api_key=api_key)
-        self.model_id = "gemini-3-flash-preview"
+        pass
 
-    async def analyze_food_image(self, image_bytes: bytes, mime_type: str):
+    async def analyze_food_image(self, image_bytes: bytes, mime_type: str) -> dict:
+        """
+        Analyzes an image to determine if it contains food and extracts nutritional info.
+        """
         try:
+            # Optimize image (resize and convert to JPEG)
             img = Image.open(io.BytesIO(image_bytes))
-            img.thumbnail((512, 512))
+            img.thumbnail((512, 512)) # Maintain aspect ratio, max 512x512
             if img.mode != "RGB":
                 img = img.convert("RGB")
             
             buffer = io.BytesIO()
             img.save(buffer, format="JPEG", quality=75)
-            img_data = buffer.getvalue()
+            optimized_image_bytes = buffer.getvalue()
+            mime_type = "image/jpeg" # Always JPEG after conversion
+
+            # Convert bytes to base64 data URL
+            base64_image = base64.b64encode(optimized_image_bytes).decode('utf-8')
+            image_url = f"data:{mime_type};base64,{base64_image}"
 
             prompt = """
             Analyze the image and determine if it contains food.
@@ -40,24 +46,21 @@ class GeminiClient:
               }
             }
             If the image does not contain edible food, set is_food to false and values to 0.
+            Response must be valid JSON without markdown formatting.
             """
 
-            response = self.client.models.generate_content(
-                model=self.model_id,
-                contents=[
-                    prompt,
-                    types.Part.from_bytes(data=img_data, mime_type="image/jpeg")
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.1
-                )
-            )
+            # Call the vision service
+            response_text = await analyze_image(image_url, prompt)
 
-            if not response.text:
-                raise ValueError("No response text")
-
-            data = json.loads(response.text)
+            # Clean potential markdown formatting
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+            
+            response_text = response_text.strip()
+            
+            data = json.loads(response_text)
 
             return {
                 "is_food": bool(data.get("is_food", True)),
@@ -71,5 +74,5 @@ class GeminiClient:
             }
 
         except Exception as e:
-            logger.error(f"Gemini Error: {str(e)}")
+            logger.error(f"Food Analysis Error: {str(e)}")
             raise e

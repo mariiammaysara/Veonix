@@ -1,17 +1,23 @@
-# Changed from node:18-alpine to node:20-alpine
-FROM node:20-alpine
+# Builder stage
+FROM node:20-alpine AS builder
 
 WORKDIR /app
-
 COPY package*.json ./
-
-RUN npm cache clean --force
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
 COPY . .
-
-# Now this will work because Node.js is >= 20.9.0
 RUN npm run build
+
+# Runner stage
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 

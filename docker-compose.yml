@@ -1,20 +1,20 @@
-version: '3.8'
-
 services:
   backend:
-    build: ./backend
-    container_name: veonix-api
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    env_file:
-      - ./backend/.env
-    # Volume to keep the database persistent on your computer
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - DATABASE_URL=sqlite:///./veonix.db
     volumes:
-      - ./backend/food_app.db:/app/food_app.db
+      - ./backend/veonix.db:/app/veonix.db
 
   frontend:
-    build: ./frontend
-    container_name: veonix-ui
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
