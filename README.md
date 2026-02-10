@@ -372,4 +372,6 @@ We welcome contributions from the community! To contribute:
 This project is open source and available under the terms of the **MIT License**. See the `LICENSE` file for more details.
 
 ---
+<p align="center">
+  <strong>Developed by Mariam Maysara</strong>
 </p>
