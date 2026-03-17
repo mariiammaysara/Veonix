@@ -1,12 +1,12 @@
 "use client";
-import React, { useState, useCallback, useRef } from "react";
-import { Image, Upload, RefreshCw, Zap } from "lucide-react";
 
-type Props = {
+import React, { useState, useCallback, useRef } from "react";
+
+interface Props {
   onFile: (file: File | null) => void;
   preview: string | null;
   onAnalyze: () => void;
-};
+}
 
 export default function UploadBox({ onFile, preview, onAnalyze }: Props) {
   const [isDragging, setIsDragging] = useState(false);
@@ -14,133 +14,84 @@ export default function UploadBox({ onFile, preview, onAnalyze }: Props) {
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setIsDragging(true);
-    } else if (e.type === "dragleave") {
-      setIsDragging(false);
-    }
+    setIsDragging(e.type === "dragover");
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onFile(e.dataTransfer.files[0]);
-    }
+    if (e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);
   }, [onFile]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onFile(e.target.files[0] ?? null);
-    }
-  };
-
-  const handleContainerClick = () => {
-    if (!preview && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const onChangeImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
+  if (preview) {
+    return (
+      <div className="anim-scale-in" style={{ width: "100%", maxWidth: "min(480px, 100%)", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.05)", overflow: "hidden", position: "relative", margin: "0 auto" }}>
+        <img src={preview} alt="Preview" style={{ width: "100%", height: "clamp(200px, 30vh, 320px)", objectFit: "cover", display: "block" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "110px", background: "linear-gradient(to top,rgba(2,6,23,0.97),transparent)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px", display: "flex", gap: "10px" }}>
+          <button onClick={() => fileInputRef.current?.click()} style={{
+            padding: "10px 16px", background: "rgba(2,6,23,0.85)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px", color: "#475569", fontSize: "14px", fontWeight: 500, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: "6px", backdropFilter: "blur(8px)"
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" />
+            </svg>
+            Change
+          </button>
+          <button onClick={onAnalyze} className="btn-glow" style={{
+            flex: 1, padding: "10px", background: "#10b981", border: "none", borderRadius: "12px",
+            color: "#020617", fontSize: "15px", fontWeight: 700, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#020617" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            Analyze meal
+          </button>
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} className="hidden" />
+      </div>
+    );
+  }
 
   return (
     <div
-      onDragEnter={handleDrag}
-      onDragLeave={handleDrag}
-      onDragOver={handleDrag}
-      onDrop={handleDrop}
-      onClick={handleContainerClick}
-      className={`
-        relative group w-full max-w-xl mx-auto
-        bg-slate-800/40 backdrop-blur-xl rounded-[1.5rem] 
-        border transition-all duration-500 ease-out overflow-hidden
-        ${preview ? 'h-auto min-h-[400px] border-emerald-500/20' : 'h-64 md:h-80 cursor-pointer border-white/10 hover:border-emerald-400/30 hover:bg-emerald-500/5 hover:scale-[1.01] hover:shadow-[0_0_40px_rgba(16,185,129,0.1)]'}
-        ${isDragging ? "border-emerald-500/50 bg-emerald-500/10 scale-[1.02] shadow-[0_0_50px_rgba(16,185,129,0.2)]" : ""}
-      `}
+      onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
+      onClick={() => fileInputRef.current?.click()}
+      className="anim-scale-in"
+      style={{
+        width: "100%", maxWidth: "min(480px, 100%)", borderRadius: "20px",
+        background: isDragging ? "rgba(16,185,129,0.025)" : "rgba(10,18,38,0.6)",
+        border: `1.5px dashed ${isDragging ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.06)"}`,
+        cursor: "pointer", transition: "all .2s ease",
+        margin: "0 auto",
+        transform: isDragging ? "scale(1.02)" : "scale(1)"
+      }}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleChange}
-        className="hidden"
-      />
-
-      {/* Empty State */}
-      {!preview && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-          {/* Icon Circle */}
-          <div className={`
-              mb-6 w-16 h-16 rounded-full bg-slate-900/60
-              flex items-center justify-center
-              border border-white/5
-              transition-all duration-500
-              group-hover:scale-110 group-hover:border-emerald-500/30 group-hover:bg-slate-900/80
-            `}>
-            <Image
-              strokeWidth={1.5}
-              className={`w-8 h-8 text-slate-400 group-hover:text-emerald-400 transition-colors duration-300 ${isDragging ? "text-emerald-400 animate-pulse" : ""}`}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-slate-200 group-hover:text-emerald-100 transition-colors">
-              Upload a meal image
-            </h3>
-            <p className="text-sm text-slate-500 group-hover:text-slate-400 transition-colors">
-              Click or drag & drop to analyze
-            </p>
-          </div>
-
-          <p className="absolute bottom-8 text-xs text-slate-600 font-medium tracking-wide uppercase opacity-70 group-hover:opacity-100 transition-opacity">
-            PNG, JPG, WEBP • Max 5MB
-          </p>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 20px 24px", gap: "14px" }}>
+        {/* Icon ring — float when empty */}
+        <div className="anim-float" style={{ width: "54px", height: "54px", borderRadius: "16px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.12)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+          <div style={{ position: "absolute", inset: "-6px", borderRadius: "24px", border: "1px dashed rgba(16,185,129,0.1)" }} />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" />
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+          </svg>
         </div>
-      )}
-
-      {/* Selected State (Preview) */}
-      {preview && (
-        <div className="absolute inset-0 flex flex-col animate-in fade-in zoom-in duration-500">
-          {/* Image Layer */}
-          <div className="relative flex-1 w-full bg-slate-950 overflow-hidden">
-            <img
-              src={preview}
-              alt="Meal preview"
-              className="w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
-            />
-
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80"></div>
-          </div>
-
-          {/* Action Bar */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between gap-4 bg-gradient-to-t from-slate-900/90 to-transparent pt-20">
-            <button
-              onClick={onChangeImage}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 text-sm font-medium transition-all hover:scale-105 backdrop-blur-md border border-white/10"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Change
-            </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold shadow-lg shadow-emerald-500/20 transition-all transform hover:scale-105 active:scale-95"
-            >
-              <Zap className="w-4 h-4 fill-current" />
-              Analyze Meal
-            </button>
-          </div>
+        <div>
+          <p style={{ fontSize: "16px", fontWeight: 600, color: "#cbd5e1", textAlign: "center" }}>Drop your meal photo here</p>
+          <p style={{ fontSize: "12px", color: "#475569", textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>Works best with clear, well-lit photos<br />JPG · PNG · WEBP · up to 10 MB</p>
         </div>
-      )}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "180px" }}>
+          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.04)" }} />
+          <span style={{ fontSize: "11px", color: "#334155", textTransform: "uppercase", letterSpacing: ".08em" }}>or</span>
+          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.04)" }} />
+        </div>
+        <button style={{ padding: "8px 24px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "99px", color: "#475569", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>
+          Browse files
+        </button>
+      </div>
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} className="hidden" />
     </div>
   );
 }

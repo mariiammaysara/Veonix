@@ -1,168 +1,208 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Utensils, Flame, Trash2 } from "lucide-react";
+import Navbar from "@/components/navbar";
+import { useMealHistory } from "@/hooks/use-meal-history";
+import type { MealHistoryItem } from "@/lib/types";
 
-// History Key for LocalStorage (must match UploadPage)
-const HISTORY_KEY = "veonix_meal_history";
-
+/**
+ * Veonix — Meal History Page
+ * 
+ * Displays a grid of previously analyzed meals with nutritional summaries.
+ * Optimized for vertical spacing to prevent navbar overlap.
+ */
 export default function HistoryPage() {
-  const router = useRouter();
-  const [history, setHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        router.push("/");
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router]);
-
-  useEffect(() => {
-    // Load from LocalStorage
-    try {
-      const existing = localStorage.getItem(HISTORY_KEY);
-      if (existing) {
-        setHistory(JSON.parse(existing));
-      }
-    } catch (e) {
-      console.error("Failed to load history", e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const handleDelete = (id: number | string) => { // ID might be string or number depending on backend response vs generated
-    if (!id) {
-      // Fallback for items without ID (generated purely on frontend?)
-      // If no ID, we might need a different way to identify, but let's assume analyze returns an ID or we should generate one.
-      // Actually, the backend still returns an ID. If we use that, good.
-      // If we decide to support fully offline later, we'd need frontend IDs.
-      // For now, let's filter by index if needed, but standard is ID.
-      return;
-    }
-
-    try {
-      const updated = history.filter((meal) => meal.id !== id);
-      setHistory(updated);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    } catch (err) {
-      console.error("Delete failed locally:", err);
-    }
-  };
+  const { meals, total, loading, handleDelete } = useMealHistory();
 
   return (
-    <div className="min-h-screen w-full bg-[#020617] text-slate-100 p-4 md:p-6 relative overflow-hidden flex flex-col items-center">
+    <div style={{ minHeight: "100vh", background: "#020617", color: "#f1f5f9", display: "flex", flexDirection: "column", position: "relative", overflowX: "hidden" }}>
+      <div className="g1" />
 
-      {/* Background Aurora Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
+      {/* Shared Floating Navbar */}
+      <Navbar />
 
-      <div className="w-full max-w-[1100px] relative z-10 flex-1 flex flex-col">
+      {/* Page content — properly below navbar with 80px offset */}
+      <div style={{
+        flex: 1, display: "flex", flexDirection: "column",
+        alignItems: "center", padding: "100px 20px 40px",
+        position: "relative", gap: "32px", zIndex: 1
+      }}>
 
         {/* Header */}
-        <div className="flex flex-col items-center justify-center mb-12 relative">
-          <Link
-            href="/"
-            className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-400 hover:text-emerald-400 transition-colors group px-3 py-2 rounded-full hover:bg-slate-800/50"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="hidden sm:inline text-sm font-medium">Home</span>
-          </Link>
-
-          <div className="flex flex-col items-center">
-            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
-              Your Meal History
-            </h1>
-            {/* Gradient Underline */}
-            <div className="h-1 w-24 bg-gradient-to-r from-emerald-500/0 via-emerald-500/50 to-emerald-500/0 rounded-full"></div>
-          </div>
+        <div className="anim-fade-up" style={{ textAlign: "center" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: 800, color: "#f1f5f9", marginBottom: "6px" }}>
+            Your meal history
+          </h2>
+          <p style={{ fontSize: "14px", color: "#64748b" }}>
+            {total} meal{total !== 1 ? "s" : ""} tracked so far
+          </p>
         </div>
 
-        {/* Content */}
+        {/* Grid Wrapper */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-slate-800/40 rounded-2xl h-64 border border-white/5"></div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px", width: "100%", maxWidth: "900px" }}>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} style={{
+                height: "160px", borderRadius: "16px",
+                background: "rgba(15,23,42,0.4)",
+                border: "1px solid rgba(255,255,255,0.04)",
+                animation: "pulse 2s infinite ease-in-out"
+              }} />
             ))}
           </div>
-        ) : history.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
-            <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
-              <Utensils className="w-8 h-8 text-emerald-500/60" />
+        ) : meals.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", paddingTop: "60px" }} className="anim-fade-up">
+            <div style={{
+              width: "60px", height: "60px", borderRadius: "20px",
+              background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.05)",
+              display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 2h18M3 7h18M3 12h18M3 17h18M3 22h18" />
+              </svg>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">No meals yet</h2>
-            <p className="text-slate-400 mb-8 max-w-xs mx-auto">
-              Analyze your first meal to see it here
-            </p>
-            <Link
-              href="/dashboard/upload"
-              className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-transform hover:scale-105"
-            >
-              Analyze Meal
+            <p style={{ fontSize: "15px", color: "#64748b", fontWeight: 500 }}>No meals tracked yet</p>
+            <Link href="/dashboard/upload" style={{
+              padding: "10px 24px", background: "#10b981", borderRadius: "99px",
+              color: "#020617", fontSize: "13px", fontWeight: 700, textDecoration: "none"
+            }} className="btn-glow">
+              Analyze your first meal
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-            {history.map((meal, index) => (
-              <div
-                key={meal.id || index}
-                className="bg-slate-900/40 border border-slate-800 backdrop-blur-sm rounded-2xl p-5 hover:border-emerald-500/20 transition-all group relative"
-              >
-                {/* Delete Action */}
-                <button
-                  onClick={() => handleDelete(meal.id)}
-                  className="absolute top-4 right-4 text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-800 rounded-full"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                    <Utensils className="w-6 h-6 text-emerald-500" />
-                  </div>
-                  <div className="pr-6">
-                    <h3 className="text-lg font-semibold text-slate-200 line-clamp-1 min-h-[1.75rem]" title={meal.food_name}>
-                      {meal.food_name || "Unknown Meal"}
-                    </h3>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Flame className="w-3.5 h-3.5 text-orange-400" />
-                      <span className="text-sm font-medium text-slate-300">
-                        {meal.calories} <span className="text-slate-500 font-normal">kcal</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mt-auto">
-                  {/* Protein */}
-                  <div className="bg-slate-950/50 rounded-lg p-2 text-center border border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Prot</p>
-                    <p className="text-sm font-semibold text-slate-300">{meal.macros?.protein || 0}g</p>
-                  </div>
-                  {/* Carbs */}
-                  <div className="bg-slate-950/50 rounded-lg p-2 text-center border border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Carb</p>
-                    <p className="text-sm font-semibold text-slate-300">{meal.macros?.carbs || 0}g</p>
-                  </div>
-                  {/* Fat */}
-                  <div className="bg-slate-950/50 rounded-lg p-2 text-center border border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Fat</p>
-                    <p className="text-sm font-semibold text-slate-300">{meal.macros?.fat || 0}g</p>
-                  </div>
-                </div>
-              </div>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+            gap: "16px",
+            width: "100%",
+            maxWidth: "1000px"
+          }}>
+            {meals.map((meal, i) => (
+              <MealCard key={meal.id} meal={meal} onDelete={handleDelete} index={i} />
             ))}
+
+            {/* Add meal card */}
+            <Link href="/dashboard/upload" className="card-hover anim-fade-up delay-4" style={{
+              background: "rgba(15,23,42,0.4)",
+              border: "1px dashed rgba(255,255,255,0.08)",
+              borderRadius: "20px", padding: "24px",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: "12px", textDecoration: "none", minHeight: "160px",
+              transition: "all .3s"
+            }}>
+              <div style={{
+                width: "44px", height: "44px", borderRadius: "14px",
+                background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.12)",
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </div>
+              <span style={{ fontSize: "13px", color: "#34d399", fontWeight: 600 }}>Analyze New Meal</span>
+            </Link>
           </div>
         )}
+      </div>
 
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function MealCard({ meal, onDelete, index }: { meal: MealHistoryItem; onDelete: (id: number) => void; index: number }) {
+  const date = new Date(meal.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  return (
+    <div
+      className={`card-hover anim-fade-up delay-${Math.min(index + 1, 6)}`}
+      style={{
+        background: "rgba(15,23,42,0.55)",
+        border: "1px solid rgba(255,255,255,0.05)",
+        borderRadius: "20px", padding: "20px",
+        position: "relative",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+      }}
+    >
+      {/* Delete button */}
+      <button
+        onClick={() => onDelete(meal.id)}
+        style={{
+          position: "absolute", top: "14px", right: "14px",
+          width: "28px", height: "28px",
+          background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.03)",
+          cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "#475569", borderRadius: "8px",
+          transition: "all .2s",
+          zIndex: 2
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLButtonElement).style.color = "#f87171";
+          (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.08)";
+          (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.15)";
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLButtonElement).style.color = "#475569";
+          (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.02)";
+          (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.03)";
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+
+      {/* Food info */}
+      <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "16px", paddingRight: "30px" }}>
+        <div style={{
+          width: "48px", height: "48px", borderRadius: "12px",
+          background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.15)",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+        }}>
+          <span style={{ fontSize: "20px" }}>🍽️</span>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: "15px", fontWeight: 700, color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {meal.food_name}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "rgba(251,146,60,0.1)", padding: "2px 6px", borderRadius: "6px", border: "1px solid rgba(251,146,60,0.15)" }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fb923c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2c0 0-5 5.5-5 10a5 5 0 0 0 10 0C17 7.5 12 2 12 2z" />
+              </svg>
+              <span style={{ fontSize: "11px", color: "#fb923c", fontWeight: 700 }}>{meal.calories} kcal</span>
+            </div>
+            <span style={{ fontSize: "11px", color: "#475569", fontWeight: 500 }}>{date}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Macros */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px" }}>
+        {[
+          { label: "PROT", value: meal.protein, color: "#38bdf8" },
+          { label: "CARB", value: meal.carbs, color: "#fbbf24" },
+          { label: "FAT", value: meal.fat, color: "#fb7185" },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{
+            background: "rgba(2,6,23,0.45)", borderRadius: "10px",
+            padding: "8px 4px", textAlign: "center",
+            border: "1px solid rgba(255,255,255,0.03)",
+            position: "relative",
+            overflow: "hidden"
+          }}>
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "2px", background: color, opacity: 0.3 }} />
+            <div style={{ fontSize: "9px", color: "#475569", textTransform: "uppercase", fontWeight: 700, letterSpacing: ".05em" }}>{label}</div>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#cbd5e1", marginTop: "2px" }}>{value}g</div>
+          </div>
+        ))}
       </div>
     </div>
   );

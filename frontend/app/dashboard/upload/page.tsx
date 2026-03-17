@@ -1,203 +1,172 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Navbar from "@/components/navbar";
 import UploadBox from "@/components/upload-box";
-
 import ResultsDisplay from "@/components/results-display";
 import LoadingScreen from "@/components/LoadingScreen";
 import { analyzeImage } from "@/lib/api";
-import { X, Apple, Salad, Banana, Drumstick, Dumbbell, Droplet, Utensils, Zap, Flame, Leaf, Fish, Candy, RefreshCw } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-
-import { ApiError } from "@/lib/api";
 import { getUserFriendlyError } from "@/lib/error-utils";
-import ErrorCard from "@/components/error-card";
+import type { MealResult } from "@/lib/types";
 
-// History Key for LocalStorage
-const HISTORY_KEY = "veonix_meal_history";
-
+/**
+ * Veonix — Upload & Analysis Page
+ * 
+ * Refined layout with a compact upload box, nutritional tips,
+ * and improved spacing.
+ */
 export default function UploadPage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any | null>(null);
-  const [error, setError] = useState<{ title: string; message: string } | null>(null);
+  const [result, setResult] = useState<MealResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (result) {
-          setFile(null);
-          setPreview(null);
-          setResult(null);
-        } else {
-          router.push("/");
-        }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (result) {
+        setResult(null);
+        setFile(null);
+        setPreview(null);
+      } else {
+        router.push("/");
       }
     };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [result, router]);
 
-  const onFile = (f: File | null) => {
+  const handleFile = (f: File | null) => {
     setResult(null);
     setError(null);
-    if (!f) {
-      setFile(null);
-      setPreview(null);
-    } else {
-      setFile(f);
+    setFile(f);
+    if (f) {
       const url = URL.createObjectURL(f);
       setPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreview(null);
     }
   };
 
-  const saveToHistory = (mealData: any) => {
-    try {
-      const existing = localStorage.getItem(HISTORY_KEY);
-      const history = existing ? JSON.parse(existing) : [];
-      // Add new meal to the beginning
-      // Ensure we have a timestamp if not provided by backend properly (though it usually is)
-      const newEntry = {
-        ...mealData,
-        created_at: mealData.created_at || new Date().toISOString()
-      };
-      const updated = [newEntry, ...history];
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    } catch (e) {
-      console.error("Failed to save history locally", e);
-    }
-  };
-
-  const onAnalyze = async () => {
-    if (!file) {
-      setError({ title: "No image selected", message: "Please select an image first." });
-      return;
-    }
-
+  const handleAnalyze = async () => {
+    if (!file) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await analyzeImage(file);
-      setResult(res);
-      saveToHistory(res);
-    } catch (err: any) {
-      // Use the global error handler
-      const userFriendly = getUserFriendlyError(err);
-      setError(userFriendly);
+      const data = await analyzeImage(file);
+      setResult(data);
+    } catch (err: unknown) {
+      setError(getUserFriendlyError(err).message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] text-slate-100 p-4 relative overflow-hidden">
+    <div style={{ minHeight: "100vh", background: "#020617", color: "#f1f5f9", display: "flex", flexDirection: "column", position: "relative", overflowX: "hidden" }}>
+      <div className="g1" />
 
-      {/* Background Aurora Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-emerald-500/20 rounded-full blur-[100px] animate-float-slow pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-teal-500/20 rounded-full blur-[100px] animate-float pointer-events-none"></div>
-      <div className="absolute top-[40%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+      {/* Shared Navbar */}
+      <Navbar />
 
-      {/* Background Floating Icons - Organized Layout */}
-      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {[
-          { Icon: Apple, top: '8%', left: '15%' },
-          { Icon: Banana, top: '12%', left: '80%' },
+      {/* Main content */}
+      <div style={{
+        flex: 1, display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        padding: "80px 20px 40px", gap: "32px",
+        position: "relative", zIndex: 1
+      }}>
 
-          { Icon: Salad, top: '30%', left: '8%' },
-          { Icon: Dumbbell, top: '32%', left: '90%' },
-
-          { Icon: Flame, top: '55%', left: '10%' },
-          { Icon: Zap, top: '60%', left: '88%' },
-
-          { Icon: Utensils, top: '80%', left: '20%' },
-          { Icon: Leaf, top: '85%', left: '75%' },
-        ].map((item, i) => (
-          <div
-            key={i}
-            className="animate-float"
-            style={{
-              position: 'absolute',
-              top: item.top,
-              left: item.left,
-              opacity: 0.08,
-              transform: 'scale(0.9)',
-              animationDuration: '14s',
-              animationDelay: `${i * 1.5}s`
-            }}
-          >
-            <item.Icon size={32} strokeWidth={1.5} />
-          </div>
-        ))}
-      </div>
-
-      {!result && (
-        <Link
-          href="/"
-          className="absolute top-6 right-6 p-2 rounded-full bg-slate-800/60 hover:bg-slate-700/60 backdrop-blur-md transition shadow-lg z-50"
-        >
-          <X className="w-5 h-5 text-emerald-400" />
-        </Link>
-      )}
-
-      <div className={`w-full max-w-4xl transition-all duration-300 relative z-10`}>
-        {/* Subtle Glow Behind Card */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-emerald-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-
-        {!result && (
-          <div className="animate-fade-up flex flex-col items-center">
-            <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300 tracking-tight">
-              Analyze Your Meal
-            </h1>
-
-            <div className="w-full max-w-xl relative">
-              <UploadBox
-                onFile={onFile}
-                preview={preview}
-                onAnalyze={onAnalyze}
-              />
-
-              {error && (
-                <ErrorCard
-                  title={error.title}
-                  message={error.message}
-                  onRetry={onAnalyze}
-                />
-              )}
+        {!result ? (
+          <>
+            {/* Header */}
+            <div className="anim-fade-up" style={{ textAlign: "center" }}>
+              <h1 style={{ fontSize: "clamp(22px, 3vw, 28px)", fontWeight: 800, color: "#f1f5f9", marginBottom: "8px" }}>
+                Analyze Your Meal
+              </h1>
+              <p style={{ fontSize: "14px", color: "#64748b", maxWidth: "340px", lineHeight: 1.6, margin: "0 auto" }}>
+                Upload a clear photo to get instant, accurate nutritional insights.
+              </p>
             </div>
-          </div>
-        )}
 
-        {result && (
-          <div className="animate-fade-up">
-            <ResultsDisplay data={result} preview={preview} />
-
-            <div className="mt-10 flex justify-center">
-              <button
-                onClick={() => {
-                  setFile(null);
-                  setPreview(null);
-                  setResult(null);
-                }}
-                className="group flex items-center gap-2 px-8 py-3 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 font-medium rounded-full border border-slate-700/50 hover:border-emerald-500/30 transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.1)]"
-              >
-                <div className="p-1.5 bg-slate-700/50 rounded-full group-hover:bg-emerald-500/20 group-hover:text-emerald-400 transition-colors">
-                  <Utensils className="w-4 h-4" />
-                </div>
-                Analyze Another Meal
-              </button>
+            {/* Upload box container */}
+            <div className="anim-scale-in delay-1" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+              <UploadBox onFile={handleFile} preview={preview} onAnalyze={handleAnalyze} />
             </div>
-          </div>
+
+            {/* Tips Section */}
+            {!preview && (
+              <div className="anim-fade-up delay-2" style={{
+                display: "flex", flexWrap: "wrap", gap: "10px", width: "100%",
+                maxWidth: "480px", justifyContent: "center"
+              }}>
+                {[
+                  { icon: <path d="M12 2v2m0 16v2m10-10h-2M4 10H2m15.36-5.36l-1.42 1.42M6.05 17.95l-1.42 1.42m12.73 0l-1.42-1.42M6.05 6.05L4.63 4.63" />, text: "Use good lighting for accuracy" },
+                  { icon: <path d="M3 6l9-4 9 4v11a2 2 0 01-2 2H5a2 2 0 01-2-2V6z" />, text: "Single dish per photo" },
+                ].map(({ icon, text }, i) => (
+                  <div key={i} style={{
+                    flex: "1 1 200px", background: "rgba(15,23,42,0.3)",
+                    border: "1px solid rgba(255,255,255,0.04)",
+                    borderRadius: "12px", padding: "10px 14px",
+                    display: "flex", alignItems: "center", gap: "10px",
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10" />
+                      {icon}
+                    </svg>
+                    <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 500 }}>{text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="anim-scale-in" style={{
+                width: "100%", maxWidth: "480px", padding: "14px",
+                background: "rgba(239, 68, 68, 0.05)",
+                border: "1px solid rgba(239, 68, 68, 0.15)",
+                borderRadius: "12px", color: "#f87171",
+                fontSize: "12px", textAlign: "center", fontWeight: 500
+              }}>
+                {error}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="anim-scale-in" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+              <ResultsDisplay data={result} preview={preview} />
+            </div>
+            <button
+              onClick={() => { setFile(null); setPreview(null); setResult(null); setError(null); }}
+              style={{
+                padding: "10px 24px",
+                background: "rgba(15,23,42,0.6)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "99px", color: "#94a3b8",
+                fontSize: "13px", fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: "8px",
+                transition: "all .2s",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
+              }}
+              className="hover:scale-105 hover:border-emerald-500/30 hover:text-white"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              Analyze another meal
+            </button>
+          </>
         )}
       </div>
-
     </div>
   );
 }
