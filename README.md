@@ -14,9 +14,9 @@
 
 ---
 
-## 🚀 Features
+##  Features
 
-### 🛠️ Backend
+###  Backend
 - **Gemini 2.5 Flash Integration**: Google's latest multimodal AI for food identification and nutrition estimation.
 - **Clean Architecture**: Modular design (Controllers, Services, Providers, Repositories).
 - **Provider Protocol Pattern**: Easily swap vision providers (Gemini, OpenAI, etc.).
@@ -25,7 +25,7 @@
 - **Middleware Stack**: Request tracing, detailed logging, and performance timing.
 - **Pydantic v2**: Strict schema validation for robust API contracts.
 
-### 🎨 Frontend
+###  Frontend
 - **Next.js 15 App Router**: High-performance React framework for optimal UX.
 - **Modern TypeScript**: End-to-end type safety for reliable development.
 - **Drag & Drop Upload**: Secure, intuitive interface with real-time image preview.
@@ -36,7 +36,7 @@
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ### System Flow
 ```text
@@ -76,7 +76,7 @@
 
 ---
 
-## 💻 Tech Stack
+##  Tech Stack
 
 ### Backend
 | Technology | Role |
@@ -105,7 +105,7 @@
 
 ---
 
-## 🛠️ Installation
+##  Installation
 
 ### Prerequisites
 - [Docker & Docker Compose](https://docs.docker.com/get-docker/) (Recommended)
@@ -122,19 +122,6 @@ The app will be available at `http://localhost:3000`.
 
 ---
 
-## 👨‍💻 Author
-**Mariam Maysara**
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mariam-maysara/)
-[![GitHub](https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white)](https://github.com/mariiammaysara)
-
----
-
-## 📜 License
-Distributed under the MIT License. See `LICENSE` for more information.
-ite` (or Web Service) for the **Frontend**.
-   - Set `NEXT_PUBLIC_API_URL` to your backend's URL.
-
 ### Deploy with Docker
 ```bash
 # Build production images
@@ -144,23 +131,20 @@ docker-compose -f docker-compose.yml build
 docker-compose up -d
 ```
 
----
-
 ## Contributing
 1. Fork the repository.
 2. Create your feature branch (`git checkout -b feature/amazing-feature`).
 3. Commit your changes (`git commit -m 'Add amazing feature'`).
 4. Push to the branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
-
----
-
-## Author
-**Mariam Maysara**
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mariam-maysara/)
-[![GitHub](https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white)](https://github.com/mariiammaysara)
-
+6. Open a Pull Request.
 ---
 
 ## License
 Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+## Author
+<p align="center">
+  © Built by <b>Mariam Maysara</b>
+</p>
