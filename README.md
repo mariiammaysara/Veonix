@@ -135,6 +135,12 @@ docker-compose -f docker-compose.yml build
 # Run in detached mode
 docker-compose up -d
 ```
+---
+## ⚠️ Deployment Notes
+
+- Backend is deployed on Render (free tier)
+- First request may take ~30–60 seconds due to cold start
+---
 
 ## Contributing
 1. Fork the repository.
