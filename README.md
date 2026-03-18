@@ -9,7 +9,7 @@
   [![AI](https://img.shields.io/badge/AI-Gemini_2.5_Flash-4285F4)](https://deepmind.google/technologies/gemini/)
   [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-  [Live Demo](https://veonix.mariammaysara.com/) · [API Docs](http://localhost:8000/docs) · [Report Bug](https://github.com/mariiammaysara/Veonix/issues)
+  [Live Demo](https://veonix.mariammaysara.com/) · [API Docs](https://veonix-api.onrender.com/docs) · [Report Bug](https://github.com/mariiammaysara/Veonix/issues)
 </div>
 
 ---
