@@ -35,7 +35,12 @@
 - **Micro-animations**: Seamless transitions (fade-up, float, shimmer) via CSS.
 
 ---
+## ⚠️ Known Limitations
 
+- Portion estimation from images is inherently unreliable without a reference scale.
+- Current approach relies on AI estimation (Gemini Vision), which may produce inaccurate weights.
+- Future improvement: user-assisted portion input or reference-based estimation.
+---
 ##  Architecture
 
 ### System Flow
