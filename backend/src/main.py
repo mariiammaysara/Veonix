@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.controllers.analyze import router as analyze_router
+from src.controllers.coach import router as coach_router
 from src.controllers.health import router as health_router
 from src.middleware.request_id import RequestIdMiddleware
 from src.middleware.request_logger import RequestLoggerMiddleware
@@ -64,4 +65,5 @@ app.add_middleware(RequestIdMiddleware)
 # API Routers
 # analyze_router handles core business logic; health_router for infrastructure checks
 app.include_router(analyze_router)
+app.include_router(coach_router)
 app.include_router(health_router)

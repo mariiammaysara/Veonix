@@ -83,3 +83,13 @@ export async function getStats(): Promise<StatsResponse> {
 export async function checkHealth(): Promise<{ status: string }> {
   return request<{ status: string }>("/health");
 }
+
+export async function askCoach(question: string): Promise<{ answer: string }> {
+  return request<{ answer: string }>("/coach/ask", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ question }),
+  });
+}
