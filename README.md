@@ -138,6 +138,38 @@ docker-compose -f docker-compose.yml build
 docker-compose up -d
 ```
 ---
+## 🔌 MCP Server
+
+Veonix exposes a Model Context Protocol (MCP) server to allow direct integration of your meal history logs and current stats with Claude Desktop or other MCP-compatible clients.
+
+### Capabilities Exposed:
+- **Tool**: `get_meal_history(limit, offset)` — Fetches the list of user meals (sorted newest first), including calories and macronutrient splits.
+- **Resource**: `nutrition://stats` — Provides real-time aggregated nutrition stats (averages and meal count).
+
+### Claude Desktop Configuration
+
+To install and use this MCP server in Claude Desktop, add the following to your configuration file (located at `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "veonix": {
+      "command": "python",
+      "args": [
+        "c:/Users/Mariam Hagag/Desktop/veonix/Veonix/backend/mcp_server/server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "c:/Users/Mariam Hagag/Desktop/veonix/Veonix/backend",
+        "DATABASE_URL": "sqlite:///c:/Users/Mariam Hagag/Desktop/veonix/Veonix/backend/veonix.db"
+      }
+    }
+  }
+}
+```
+
+*Note: Ensure `python` is in your system PATH and environment dependencies (including `mcp` and `sqlalchemy`) are fully installed.*
+
+---
 ## ⚠️ Database Migrations & Deployment Notes
 
 - **Alembic Database Migrations**: `alembic upgrade head` is now a required deployment step to synchronize the database schema before the application starts. The Docker container executes this automatically on startup. If deploying manually, run:
