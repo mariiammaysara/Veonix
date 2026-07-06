@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
 
+    # ── LangSmith / LangChain Tracing ─────────────────────────
+    LANGCHAIN_TRACING_V2: str = "false"
+    LANGCHAIN_API_KEY: str = ""
+    LANGCHAIN_PROJECT: str = "veonix"
+
     class Config:
         env_file = ".env"
         # Prevents startup crash if legacy keys remain in .env

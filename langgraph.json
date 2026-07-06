@@ -1,0 +1,12 @@
+{
+  "dependencies": [
+    "./backend/requirements.txt"
+  ],
+  "pythonpath": [
+    "./backend"
+  ],
+  "graphs": {
+    "supervisor": "src.agents.supervisor:main_graph"
+  },
+  "env": "./backend/.env"
+}

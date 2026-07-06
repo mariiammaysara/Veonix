@@ -176,8 +176,10 @@ To install and use this MCP server in Claude Desktop, add the following to your 
   ```bash
   alembic upgrade head
   ```
-- Backend is deployed on Render (free tier)
-- First request may take ~30–60 seconds due to cold start
+- **Split-Architecture Deployment**:
+  - **FastAPI Backend (Render)**: Handles authentication, profile storage, health checks, and CRUD queries.
+  - **Agent Graph (LangGraph Platform)**: Handles supervisor routing, Vision, History (SQL), and Knowledge (RAG) subgraphs, alongside checkpointing and human-in-the-loop (HITL) breakpoints.
+  - *Note*: Running the complex agent graph on the LangGraph Platform solves the free-tier Render cold-start latency issue since the LangGraph Platform server remains active and does not experience Render's free-tier spin-down.
 ---
 
 ## Contributing
