@@ -13,6 +13,8 @@ from src.providers.vision.base import VisionProvider
 from src.providers.vision.gemini_provider import GeminiProvider
 
 
+_provider: VisionProvider | None = None
+
 def get_vision_provider() -> VisionProvider:
     """
     Retrieves the configured vision provider instance.
@@ -21,4 +23,7 @@ def get_vision_provider() -> VisionProvider:
     Returns:
         An object conforming to the VisionProvider protocol.
     """
-    return GeminiProvider()
+    global _provider
+    if _provider is None:
+        _provider = GeminiProvider()
+    return _provider

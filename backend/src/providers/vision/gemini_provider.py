@@ -57,7 +57,7 @@ class GeminiProvider:
             image = Image.open(io.BytesIO(image_bytes))
 
             # Trigger content generation with explicit JSON forcing
-            response = self.client.models.generate_content(
+            response = await self.client.aio.models.generate_content(
                 model=settings.GEMINI_MODEL,
                 contents=[GEMINI_PROMPT, image],
                 config=types.GenerateContentConfig(
