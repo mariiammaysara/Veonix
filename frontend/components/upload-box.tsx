@@ -6,9 +6,10 @@ interface Props {
   onFile: (file: File | null) => void;
   preview: string | null;
   onAnalyze: () => void;
+  isLowConfidence?: boolean;
 }
 
-export default function UploadBox({ onFile, preview, onAnalyze }: Props) {
+export default function UploadBox({ onFile, preview, onAnalyze, isLowConfidence = false }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,6 +56,20 @@ export default function UploadBox({ onFile, preview, onAnalyze }: Props) {
     );
   }
 
+  // Warning colors if RAG/vision returned low confidence and retake is required
+  const borderCol = isLowConfidence
+    ? (isDragging ? "rgba(245,158,11,0.35)" : "rgba(245,158,11,0.22)")
+    : (isDragging ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.06)");
+
+  const bgCol = isLowConfidence
+    ? "rgba(245,158,11,0.02)"
+    : (isDragging ? "rgba(16,185,129,0.025)" : "rgba(10,18,38,0.6)");
+
+  const iconStroke = isLowConfidence ? "#fbbf24" : "#34d399";
+  const iconRingBg = isLowConfidence ? "rgba(245,158,11,0.05)" : "rgba(16,185,129,0.06)";
+  const iconRingBorder = isLowConfidence ? "rgba(245,158,11,0.12)" : "rgba(16,185,129,0.12)";
+  const dashedRingBorder = isLowConfidence ? "rgba(245,158,11,0.08)" : "rgba(16,185,129,0.1)";
+
   return (
     <div
       onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
@@ -62,8 +77,8 @@ export default function UploadBox({ onFile, preview, onAnalyze }: Props) {
       className="anim-scale-in"
       style={{
         width: "100%", maxWidth: "min(480px, 100%)", borderRadius: "20px",
-        background: isDragging ? "rgba(16,185,129,0.025)" : "rgba(10,18,38,0.6)",
-        border: `1.5px dashed ${isDragging ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.06)"}`,
+        background: bgCol,
+        border: `1.5px dashed ${borderCol}`,
         cursor: "pointer", transition: "all .2s ease",
         margin: "0 auto",
         transform: isDragging ? "scale(1.02)" : "scale(1)"
@@ -71,16 +86,25 @@ export default function UploadBox({ onFile, preview, onAnalyze }: Props) {
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 20px 24px", gap: "14px" }}>
         {/* Icon ring — float when empty */}
-        <div className="anim-float" style={{ width: "54px", height: "54px", borderRadius: "16px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.12)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-          <div style={{ position: "absolute", inset: "-6px", borderRadius: "24px", border: "1px dashed rgba(16,185,129,0.1)" }} />
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <div className="anim-float" style={{ width: "54px", height: "54px", borderRadius: "16px", background: iconRingBg, border: `1px solid ${iconRingBorder}`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+          <div style={{ position: "absolute", inset: "-6px", borderRadius: "24px", border: `1px dashed ${dashedRingBorder}` }} />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" />
             <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
           </svg>
         </div>
         <div>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#cbd5e1", textAlign: "center" }}>Drop your meal photo here</p>
-          <p style={{ fontSize: "12px", color: "#475569", textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>Works best with clear, well-lit photos<br />JPG · PNG · WEBP · up to 10 MB</p>
+          {isLowConfidence ? (
+            <>
+              <p style={{ fontSize: "16px", fontWeight: 600, color: "#f87171", textAlign: "center" }}>Low confidence — please retake photo</p>
+              <p style={{ fontSize: "12px", color: "#fca5a5", opacity: 0.85, textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>Make sure the food is clearly visible, centered,<br />and well-lit, then try uploading again.</p>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: "16px", fontWeight: 600, color: "#cbd5e1", textAlign: "center" }}>Drop your meal photo here</p>
+              <p style={{ fontSize: "12px", color: "#475569", textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>Works best with clear, well-lit photos<br />JPG · PNG · WEBP · up to 10 MB</p>
+            </>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "180px" }}>
           <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.04)" }} />

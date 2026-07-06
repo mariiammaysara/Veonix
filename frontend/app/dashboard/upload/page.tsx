@@ -6,7 +6,7 @@ import Navbar from "@/components/navbar";
 import UploadBox from "@/components/upload-box";
 import ResultsDisplay from "@/components/results-display";
 import LoadingScreen from "@/components/LoadingScreen";
-import { analyzeImage } from "@/lib/api";
+import { analyzeImage, ApiError } from "@/lib/api";
 import { getUserFriendlyError } from "@/lib/error-utils";
 import type { MealResult } from "@/lib/types";
 
@@ -23,6 +23,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MealResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLowConfidence, setIsLowConfidence] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -42,6 +43,7 @@ export default function UploadPage() {
   const handleFile = (f: File | null) => {
     setResult(null);
     setError(null);
+    setIsLowConfidence(false);
     setFile(f);
     if (f) {
       const url = URL.createObjectURL(f);
@@ -56,11 +58,18 @@ export default function UploadPage() {
     if (!file) return;
     setLoading(true);
     setError(null);
+    setIsLowConfidence(false);
     try {
       const data = await analyzeImage(file);
       setResult(data);
     } catch (err: unknown) {
-      setError(getUserFriendlyError(err).message);
+      if (err instanceof ApiError && err.code === "LOW_CONFIDENCE") {
+        setIsLowConfidence(true);
+        setFile(null);
+        setPreview(null);
+      } else {
+        setError(getUserFriendlyError(err).message);
+      }
     } finally {
       setLoading(false);
     }
@@ -97,7 +106,7 @@ export default function UploadPage() {
 
             {/* Upload box container */}
             <div className="anim-scale-in delay-1" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-              <UploadBox onFile={handleFile} preview={preview} onAnalyze={handleAnalyze} />
+              <UploadBox onFile={handleFile} preview={preview} onAnalyze={handleAnalyze} isLowConfidence={isLowConfidence} />
             </div>
 
             {/* Tips Section */}
