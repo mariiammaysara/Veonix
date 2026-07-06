@@ -18,6 +18,7 @@ from src.config import settings
 from src.providers.vision.base import VisionResult
 from src.providers.vision.factory import get_vision_provider
 from src.helpers.image_processor import compress_image
+from src.helpers.prompts import build_vision_prompt, build_coach_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,9 @@ class AnalysisState(TypedDict):
 async def vision_node(state: AnalysisState) -> dict:
     """
     A graph node that runs the Gemini provider image analysis.
+    Uses GEMINI_MODEL (strong multimodal) with a goal-aware prompt.
     """
+    logger.info(f"vision_node using model={settings.GEMINI_MODEL}")
     try:
         if not state.get("image_bytes"):
             raise ValueError("No image bytes provided for vision_node.")
@@ -49,16 +52,23 @@ async def vision_node(state: AnalysisState) -> dict:
         # Preprocess/compress the image to optimize payload size
         compressed = compress_image(state["image_bytes"])
         
-        provider = get_vision_provider()
-        result = await provider.analyze(compressed)
-        
-        logger.info(f"Gemini: {result.food_name} ({result.confidence:.0%}) — {result.calories} kcal")
-        
-        # Load profile from store and verify user allergies
+        # Load profile for goal-aware prompt building and allergy checks
         from src.agents.store import NutritionCoachingStore
         store = NutritionCoachingStore()
         profile = store.get_profile()
+        dietary_goal = profile.get("dietary_goal")
         
+        # Build a goal-aware prompt — falls back to base GEMINI_PROMPT if no goal set
+        prompt = build_vision_prompt(dietary_goal)
+        if dietary_goal:
+            logger.info(f"vision_node using goal-framed prompt for dietary_goal='{dietary_goal}'")
+        
+        provider = get_vision_provider()
+        result = await provider.analyze(compressed, prompt=prompt)
+        
+        logger.info(f"Gemini: {result.food_name} ({result.confidence:.0%}) — {result.calories} kcal")
+        
+        # Verify user allergies against ingredients
         allergies = [a.strip().lower() for a in profile.get("allergies", []) if a.strip()]
         food_lower = result.food_name.lower()
         ingredients = [i.lower() for i in (result.ingredients or [])]
@@ -150,7 +160,9 @@ vision_graph = vision_workflow.compile()
 async def history_node(state: AnalysisState) -> dict:
     """
     A graph node that queries user meal history using safe database tool.
+    Uses GEMINI_MODEL_FAST — text-only SQL aggregation needs no vision capability.
     """
+    logger.info(f"history_node using model={settings.GEMINI_MODEL_FAST}")
     try:
         question = state.get("question")
         if not question:
@@ -185,7 +197,9 @@ async def knowledge_node(state: AnalysisState) -> dict:
     """
     A graph node that retrieves nutrition references from RAG local knowledge
     or falls back to Tavily search, then formats with Gemini.
+    Uses GEMINI_MODEL_FAST — formatting a text response needs no vision capability.
     """
+    logger.info(f"knowledge_node using model={settings.GEMINI_MODEL_FAST}")
     try:
         question = state.get("question")
         if not question:
@@ -198,8 +212,9 @@ async def knowledge_node(state: AnalysisState) -> dict:
         store = NutritionCoachingStore()
         profile = store.get_profile()
         recent_meals = store.get_meal_documents(limit=5)
+        dietary_goal = profile.get("dietary_goal")
         
-        profile_context = f"Dietary Goal: {profile.get('dietary_goal') or 'None'}\nAllergies: {', '.join(profile.get('allergies') or []) or 'None'}"
+        profile_context = f"Dietary Goal: {dietary_goal or 'None'}\nAllergies: {', '.join(profile.get('allergies') or []) or 'None'}"
         meals_context = "\n".join([
             f"- {m['food_name']} ({m['calories']} kcal, P: {m['protein']}g, C: {m['carbs']}g, F: {m['fat']}g) logged at {m['created_at']}"
             for m in recent_meals
@@ -216,27 +231,22 @@ async def knowledge_node(state: AnalysisState) -> dict:
             logger.info("RAG Miss: Local context unavailable. Routing web search fallback via Tavily.")
             web_result = await search_tavily(question)
             db_summary = f"Source: Web Search Result, Content: {web_result}"
-            
-        # Format the response in a coaching tone using Gemini
-        FORMAT_PROMPT = f"""
-        You are a friendly AI nutrition coach. Answer the user's question about nutrition/health using the provided information source.
         
-        User Profile:
-        {profile_context}
+        # Build a goal-aware coaching prompt using the profile's dietary goal
+        if dietary_goal:
+            logger.info(f"knowledge_node using goal-adjusted coaching prompt for dietary_goal='{dietary_goal}'")
+        format_prompt = build_coach_prompt(
+            question=question,
+            dietary_goal=dietary_goal,
+            profile_context=profile_context,
+            meals_context=meals_context,
+            db_summary=db_summary,
+        )
         
-        Recent Meals Memory:
-        {meals_context}
-        
-        User Question: "{question}"
-        Information Source Details: {db_summary}
-        
-        Be concise, helpful, and direct. Translate the source information into a friendly response.
-        Ensure you take the user's goal and allergies into consideration. If the information source contradicts their allergies, provide warning feedback.
-        """
-        
+        # Use GEMINI_MODEL_FAST — text-only formatting is well within its capability
         format_resp = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[FORMAT_PROMPT],
+            model=settings.GEMINI_MODEL_FAST,
+            contents=[format_prompt],
             config=types.GenerateContentConfig(temperature=0.3)
         )
         answer = format_resp.text.strip()
@@ -265,14 +275,20 @@ async def run_analysis_graph(
     image_bytes: Optional[bytes] = None,
     question: Optional[str] = None,
     thread_id: Optional[str] = None,
-    config: Optional[dict] = None
+    config: Optional[dict] = None,
+    request_id: Optional[str] = None,
 ) -> AnalysisState:
     """
     Runs the main supervisor orchestrator graph.
     Matches the original API contract so controllers remain unchanged.
+
+    Injects AgentTraceCallback as a LangGraph callback so every node start/end
+    and tool start/end is emitted as a structured JSON log line, mirroring the
+    HTTP-level RequestLoggerMiddleware/TimingMiddleware pattern at agent scope.
     """
     # Lazy import prevents compile-time circular dependencies
     from src.agents.supervisor import main_graph
+    from src.middleware.agent_trace import AgentTraceCallback
     
     initial_state = {
         "image_bytes": image_bytes,
@@ -290,6 +306,10 @@ async def run_analysis_graph(
             config = {"configurable": {"thread_id": thread_id}}
         else:
             config = {"configurable": {"thread_id": "default-test-thread"}}
+    
+    # Inject agent-level trace callback — one instance per invocation
+    trace_cb = AgentTraceCallback(request_id=request_id)
+    config = {**config, "callbacks": [trace_cb]}
         
     result_state = await main_graph.ainvoke(initial_state, config=config)
     return result_state

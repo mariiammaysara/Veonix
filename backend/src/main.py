@@ -21,6 +21,8 @@ from src.controllers.profile import router as profile_router
 from src.middleware.request_id import RequestIdMiddleware
 from src.middleware.request_logger import RequestLoggerMiddleware
 from src.middleware.timing import TimingMiddleware
+# Agent-level trace middleware: injected per graph invocation (not HTTP middleware)
+from src.middleware.agent_trace import AgentTraceCallback  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

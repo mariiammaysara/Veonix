@@ -17,7 +17,10 @@ class Settings(BaseSettings):
     """
     # ── Gemini Configuration ──────────────────────────────────
     GEMINI_API_KEY: str = ""
+    # Strong multimodal model — used for vision/image analysis nodes
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    # Cheaper, faster text-only model — used for history and knowledge Q&A nodes
+    GEMINI_MODEL_FAST: str = "gemini-2.0-flash"
     TAVILY_API_KEY: str = ""
 
     # ── Database Configuration ────────────────────────────────

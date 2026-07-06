@@ -9,6 +9,7 @@ Author: Mariam Maysara
 """
 
 import logging
+from typing import Optional
 from PIL import Image
 import io
 from google import genai
@@ -40,12 +41,14 @@ class GeminiProvider:
     def __init__(self):
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-    async def analyze(self, image_bytes: bytes) -> VisionResult:
+    async def analyze(self, image_bytes: bytes, prompt: Optional[str] = None) -> VisionResult:
         """
         Sends an image to Gemini and performs multimodal extraction.
 
         Args:
             image_bytes: Optimized binary image data.
+            prompt: Optional custom prompt. Falls back to GEMINI_PROMPT if None,
+                    allowing goal-aware prompt injection from the agent layer.
 
         Returns:
             Verified VisionResult object.
@@ -53,13 +56,19 @@ class GeminiProvider:
         Raises:
             VisionProviderError: If the API call fails or the response is malformed.
         """
+        # Use injected prompt if provided (e.g. goal-aware build_vision_prompt result),
+        # otherwise fall back to the static base prompt for full backward compatibility.
+        effective_prompt = prompt if prompt is not None else GEMINI_PROMPT
+
         try:
             image = Image.open(io.BytesIO(image_bytes))
+
+            logger.info(f"GeminiProvider.analyze() using model={settings.GEMINI_MODEL}")
 
             # Trigger content generation with explicit JSON forcing
             response = await self.client.aio.models.generate_content(
                 model=settings.GEMINI_MODEL,
-                contents=[GEMINI_PROMPT, image],
+                contents=[effective_prompt, image],
                 config=types.GenerateContentConfig(
                     # Temperature 0.1 ensures higher determinism for factual nutrition data
                     temperature=0.1,
@@ -76,3 +85,4 @@ class GeminiProvider:
         except Exception as e:
             logger.error(f"Gemini API handshake failed: {str(e)}")
             raise VisionProviderError(f"Upstream AI error: {str(e)}")
+
