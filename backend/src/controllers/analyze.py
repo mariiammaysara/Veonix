@@ -132,6 +132,7 @@ async def analyze_image(
             "weight_grams": result.estimated_weight_grams,
             "meal_type":   result.meal_type,
             "cuisine":     result.cuisine,
+            "allergies_warning": state.get("allergies_warning"),
             "nutrition": {
                 "calories": result.calories,
                 "protein":  result.protein,

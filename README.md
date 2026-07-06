@@ -24,6 +24,8 @@
 - **Image Optimization**: Automatic compression and normalization via Pillow.
 - **Middleware Stack**: Request tracing, detailed logging, and performance timing.
 - **Pydantic v2**: Strict schema validation for robust API contracts.
+- **Supervisor Routing & Vision Retry Loop**: Orchestrates subgraphs (vision, history, knowledge) with automatic low-confidence detection and retries.
+- **Persistent Memory & Alembic Migrations**: Manages user profiles (goals/allergies) and history via LangGraph Store and robust schema versioning.
 
 ###  Frontend
 - **Next.js 15 App Router**: High-performance React framework for optimal UX.
@@ -136,8 +138,12 @@ docker-compose -f docker-compose.yml build
 docker-compose up -d
 ```
 ---
-## ⚠️ Deployment Notes
+## ⚠️ Database Migrations & Deployment Notes
 
+- **Alembic Database Migrations**: `alembic upgrade head` is now a required deployment step to synchronize the database schema before the application starts. The Docker container executes this automatically on startup. If deploying manually, run:
+  ```bash
+  alembic upgrade head
+  ```
 - Backend is deployed on Render (free tier)
 - First request may take ~30–60 seconds due to cold start
 ---

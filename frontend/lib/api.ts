@@ -11,6 +11,7 @@ import type {
   MealHistoryResponse,
   StatsResponse,
   ApiErrorResponse,
+  UserProfile,
 } from "./types";
 
 const BASE_URL =
@@ -91,5 +92,22 @@ export async function askCoach(question: string): Promise<{ answer: string }> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ question }),
+  });
+}
+
+export async function getProfile(): Promise<UserProfile> {
+  return request<UserProfile>("/profile");
+}
+
+export async function updateProfile(
+  dietary_goal: string,
+  allergies: string[]
+): Promise<UserProfile> {
+  return request<UserProfile>("/profile", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ dietary_goal, allergies }),
   });
 }

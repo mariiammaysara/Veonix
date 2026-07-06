@@ -68,3 +68,10 @@ export interface ApiErrorResponse {
         detail: string;
     };
 }
+
+export interface UserProfile {
+    user_id: string;
+    dietary_goal: string;
+    allergies: string[];
+}
+

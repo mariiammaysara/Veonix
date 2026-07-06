@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Upload, Clock } from "lucide-react";
+import { Home, Upload, Clock, Settings } from "lucide-react";
 
 /**
  * Veonix — Shared Navbar Component
@@ -17,6 +17,7 @@ export default function Navbar() {
     { label: "Home", href: "/", icon: Home },
     { label: "Upload", href: "/dashboard/upload", icon: Upload },
     { label: "History", href: "/dashboard/history", icon: Clock },
+    { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
   return (

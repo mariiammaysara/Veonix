@@ -33,6 +33,7 @@ class AnalysisState(TypedDict):
     error: Optional[Any]
     retry_count: int
     retake_prompt: Optional[str]
+    allergies_warning: Optional[str]
 
 
 # ── Vision Subgraph Nodes & Edges ───────────────────────────────────────────
@@ -53,14 +54,40 @@ async def vision_node(state: AnalysisState) -> dict:
         
         logger.info(f"Gemini: {result.food_name} ({result.confidence:.0%}) — {result.calories} kcal")
         
+        # Load profile from store and verify user allergies
+        from src.agents.store import NutritionCoachingStore
+        store = NutritionCoachingStore()
+        profile = store.get_profile()
+        
+        allergies = [a.strip().lower() for a in profile.get("allergies", []) if a.strip()]
+        food_lower = result.food_name.lower()
+        ingredients = [i.lower() for i in (result.ingredients or [])]
+        
+        matched_allergies = []
+        for allergy in allergies:
+            if allergy in food_lower:
+                matched_allergies.append(allergy)
+            else:
+                for ing in ingredients:
+                    if allergy in ing:
+                        matched_allergies.append(allergy)
+                        break
+                        
+        warning = None
+        if matched_allergies:
+            warning = f"Warning: This meal may contain ingredients you are allergic to: {', '.join(matched_allergies)}."
+            logger.warning(f"Allergy warning triggered: {warning}")
+        
         return {
             "vision_result": result,
+            "allergies_warning": warning,
             "error": None
         }
     except Exception as e:
         logger.error(f"Error in vision_node: {str(e)}")
         return {
             "vision_result": None,
+            "allergies_warning": None,
             "error": e
         }
 
@@ -166,6 +193,18 @@ async def knowledge_node(state: AnalysisState) -> dict:
             
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
         
+        # Load user profile and meal history memory from store
+        from src.agents.store import NutritionCoachingStore
+        store = NutritionCoachingStore()
+        profile = store.get_profile()
+        recent_meals = store.get_meal_documents(limit=5)
+        
+        profile_context = f"Dietary Goal: {profile.get('dietary_goal') or 'None'}\nAllergies: {', '.join(profile.get('allergies') or []) or 'None'}"
+        meals_context = "\n".join([
+            f"- {m['food_name']} ({m['calories']} kcal, P: {m['protein']}g, C: {m['carbs']}g, F: {m['fat']}g) logged at {m['created_at']}"
+            for m in recent_meals
+        ]) or "No recent meals logged."
+        
         from src.agents.tools.rag_tool import search_nutrition_knowledge
         rag_result = await search_nutrition_knowledge(question)
         
@@ -182,10 +221,17 @@ async def knowledge_node(state: AnalysisState) -> dict:
         FORMAT_PROMPT = f"""
         You are a friendly AI nutrition coach. Answer the user's question about nutrition/health using the provided information source.
         
+        User Profile:
+        {profile_context}
+        
+        Recent Meals Memory:
+        {meals_context}
+        
         User Question: "{question}"
         Information Source Details: {db_summary}
         
         Be concise, helpful, and direct. Translate the source information into a friendly response.
+        Ensure you take the user's goal and allergies into consideration. If the information source contradicts their allergies, provide warning feedback.
         """
         
         format_resp = await client.aio.models.generate_content(

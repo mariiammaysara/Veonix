@@ -9,3 +9,4 @@ google-genai==1.61.0
 langgraph==1.2.7
 pytest==8.3.4
 pytest-asyncio==0.25.3
+alembic==1.13.1
