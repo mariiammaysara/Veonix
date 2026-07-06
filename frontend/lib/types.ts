@@ -75,3 +75,9 @@ export interface UserProfile {
     allergies: string[];
 }
 
+export interface AnalysisResponse {
+    status: string;
+    thread_id?: string;
+    analysis: MealResult;
+}
+

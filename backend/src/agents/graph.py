@@ -261,11 +261,11 @@ knowledge_workflow.add_edge("knowledge_node", END)
 knowledge_graph = knowledge_workflow.compile()
 
 
-# ── Execution Delegation ────────────────────────────────────────────────────
-
 async def run_analysis_graph(
     image_bytes: Optional[bytes] = None,
-    question: Optional[str] = None
+    question: Optional[str] = None,
+    thread_id: Optional[str] = None,
+    config: Optional[dict] = None
 ) -> AnalysisState:
     """
     Runs the main supervisor orchestrator graph.
@@ -281,8 +281,17 @@ async def run_analysis_graph(
         "history_answer": None,
         "error": None,
         "retry_count": 0,
-        "retake_prompt": None
+        "retake_prompt": None,
+        "allergies_warning": None
     }
     
-    result_state = await main_graph.ainvoke(initial_state)
+    if not config:
+        if thread_id:
+            config = {"configurable": {"thread_id": thread_id}}
+        else:
+            config = {"configurable": {"thread_id": "default-test-thread"}}
+        
+    result_state = await main_graph.ainvoke(initial_state, config=config)
     return result_state
+
+

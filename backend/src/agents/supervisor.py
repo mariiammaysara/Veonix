@@ -106,10 +106,56 @@ async def route_supervisor(state: AnalysisState) -> str:
     return await route_request(state.get("image_bytes"), state.get("question"))
 
 
+async def run_persist(state: AnalysisState) -> dict:
+    """
+    Persist the approved/analyzed meal to the database.
+    Called after user confirmation.
+    """
+    logger.info("Persist node invoked. Saving meal to database...")
+    result = state.get("vision_result")
+    if not result:
+        logger.warning("No vision_result found in state to persist.")
+        return {}
+        
+    # Import inside the node to avoid circular import issues
+    from src.db.repository import MealRepository
+    from src.db.database import SessionLocal
+    
+    db = SessionLocal()
+    try:
+        MealRepository(db).save({
+            "food_name":          result.food_name,
+            "cuisine":            result.cuisine,
+            "meal_type":          result.meal_type,
+            "preparation_method": result.preparation_method,
+            "weight_grams":       result.estimated_weight_grams,
+            "confidence":         result.confidence,
+            "calories":           result.calories,
+            "protein":            result.protein,
+            "carbs":              result.carbs,
+            "fat":                result.fat,
+            "fiber":              result.fiber,
+            "sodium":             result.sodium,
+            "ingredients":        result.ingredients,
+            "per_100g":           result.per_100g,
+            "nutrition_source":   "Gemini",
+            "is_estimated":       0,
+        })
+        logger.info("Meal saved successfully in persist_node.")
+    except Exception as e:
+        logger.error(f"Failed to save meal in persist_node: {e}")
+        return {"error": e}
+    finally:
+        db.close()
+        
+    return {}
+
+
 workflow = StateGraph(AnalysisState)
 workflow.add_node("vision_node", run_vision)
 workflow.add_node("history_node", run_history)
 workflow.add_node("knowledge_node", run_knowledge)
+workflow.add_node("persist_node", run_persist)
 
 workflow.add_conditional_edges(
     START,
@@ -122,8 +168,16 @@ workflow.add_conditional_edges(
     }
 )
 
-workflow.add_edge("vision_node", END)
+workflow.add_edge("vision_node", "persist_node")
+workflow.add_edge("persist_node", END)
 workflow.add_edge("history_node", END)
 workflow.add_edge("knowledge_node", END)
 
-main_graph = workflow.compile()
+# In-memory checkpointer for LangGraph state persistence & time-travel
+from langgraph.checkpoint.memory import MemorySaver
+memory_saver = MemorySaver()
+
+main_graph = workflow.compile(
+    checkpointer=memory_saver,
+    interrupt_before=["persist_node"]
+)

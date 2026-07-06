@@ -12,6 +12,7 @@ import type {
   StatsResponse,
   ApiErrorResponse,
   UserProfile,
+  AnalysisResponse,
 } from "./types";
 
 const BASE_URL =
@@ -58,10 +59,39 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Endpoints ──────────────────────────────────────────────
 
-export async function analyzeImage(file: File): Promise<MealResult> {
+export async function analyzeImage(file: File): Promise<AnalysisResponse> {
   const form = new FormData();
   form.append("file", file);
-  return request<MealResult>("/analyze/image", { method: "POST", body: form });
+
+  const response = await fetch(`${BASE_URL}/analyze/image`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!response.ok) {
+    let errorBody: ApiErrorResponse | null = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      // ignore
+    }
+    const message = errorBody?.error?.message ?? "An unexpected error occurred.";
+    const code = errorBody?.error?.code ?? "UNKNOWN_ERROR";
+    throw new ApiError(message, response.status, code);
+  }
+
+  const body = await response.json();
+  if (body.status === "pending_confirmation") {
+    return {
+      status: "pending_confirmation",
+      thread_id: body.data.thread_id,
+      analysis: body.data.analysis,
+    };
+  }
+  return {
+    status: "success",
+    analysis: body.data,
+  };
 }
 
 export async function getMealHistory(
@@ -110,4 +140,22 @@ export async function updateProfile(
     },
     body: JSON.stringify({ dietary_goal, allergies }),
   });
+}
+
+export async function confirmMeal(
+  threadId: string,
+  action: "approve" | "reject",
+  edits?: Partial<MealResult>
+): Promise<{ message: string }> {
+  return request<{ message: string }>(`/coach/confirm/${threadId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ action, edits }),
+  });
+}
+
+export async function getHistory(threadId: string): Promise<any[]> {
+  return request<any[]>(`/coach/history/${threadId}`);
 }

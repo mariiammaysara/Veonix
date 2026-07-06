@@ -87,8 +87,11 @@ async def test_supervisor_retry_loop_limit():
     
     with patch("src.agents.graph.compress_image", lambda x: x):
         with patch("src.providers.vision.gemini_provider.GeminiProvider.analyze", AsyncMock(return_value=mock_result)):
-            # Invoke the supervisor main_graph
-            final_state = await main_graph.ainvoke(initial_state)
+            # Invoke the supervisor main_graph with required checkpointer config
+            final_state = await main_graph.ainvoke(
+                initial_state, 
+                config={"configurable": {"thread_id": "test-supervisor-thread"}}
+            )
             
             # Verify it terminated and went to END
             # Total retry attempts must be 2, and retake_prompt must be set

@@ -88,9 +88,13 @@ async def analyze_image(
         return error_response(ErrorCode.IMAGE_TOO_LARGE)
 
     try:
-        # Step 1: Run the LangGraph flow
+        import uuid
+        from src.agents.supervisor import main_graph
+        thread_id = str(uuid.uuid4())
+        
+        # Step 1: Run the LangGraph flow with thread_id
         from src.agents.graph import run_analysis_graph
-        state = await run_analysis_graph(image_bytes)
+        state = await run_analysis_graph(image_bytes, thread_id=thread_id)
 
         # Step 2: Handle graph errors
         if state.get("error"):
@@ -98,33 +102,12 @@ async def analyze_image(
 
         result = state["vision_result"]
 
-        # Step 3: Enforce confidence threshold before persistence
+        # Step 3: Enforce confidence threshold before returning result
         from src.services.meal_service import CONFIDENCE_THRESHOLD
         if result.confidence < CONFIDENCE_THRESHOLD:
             raise LowConfidenceError(result.confidence)
 
-        # Step 4: Persist the result to the database
-        from src.db.repository import MealRepository
-        MealRepository(db).save({
-            "food_name":          result.food_name,
-            "cuisine":            result.cuisine,
-            "meal_type":          result.meal_type,
-            "preparation_method": result.preparation_method,
-            "weight_grams":       result.estimated_weight_grams,
-            "confidence":         result.confidence,
-            "calories":           result.calories,
-            "protein":            result.protein,
-            "carbs":              result.carbs,
-            "fat":                result.fat,
-            "fiber":              result.fiber,
-            "sodium":             result.sodium,
-            "ingredients":        result.ingredients,
-            "per_100g":           result.per_100g,
-            "nutrition_source":   "Gemini",
-            "is_estimated":       0,
-        })
-
-        # Step 5: Format the response in the exact same shape
+        # Step 4: Format the response shape
         formatted_result = {
             "food_name":   result.food_name,
             "confidence":  result.confidence,
@@ -145,6 +128,20 @@ async def analyze_image(
                 "is_estimated": False,
             },
         }
+
+        # Step 5: Check if graph was interrupted at persist_node breakpoint
+        config = {"configurable": {"thread_id": thread_id}}
+        state_info = await main_graph.aget_state(config)
+        
+        if "persist_node" in state_info.next:
+            return {
+                "status": "pending_confirmation",
+                "data": {
+                    "thread_id": thread_id,
+                    "analysis": formatted_result
+                }
+            }
+
         return {"status": "success", "data": formatted_result}
 
     except LowConfidenceError as e:
