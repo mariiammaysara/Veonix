@@ -33,6 +33,7 @@ export interface MealResult {
     meal_type: string;
     cuisine: string;
     nutrition: NutritionData;
+    allergies_warning?: string | null;
 }
 
 export interface MealHistoryItem {

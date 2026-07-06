@@ -212,15 +212,16 @@ export default function UploadPage() {
       });
 
       if (pendingThreadId && pendingMeal) {
+        const meal = pendingMeal as MealResult;
         setThreadId(pendingThreadId);
-        setPendingAnalysis(pendingMeal);
+        setPendingAnalysis(meal);
         setIsPending(true);
-        setEditedFoodName(pendingMeal.food_name);
-        setEditedWeight(pendingMeal.weight_grams);
-        setEditedCalories(pendingMeal.nutrition.calories);
-        setEditedProtein(pendingMeal.nutrition.protein);
-        setEditedCarbs(pendingMeal.nutrition.carbs);
-        setEditedFat(pendingMeal.nutrition.fat);
+        setEditedFoodName(meal.food_name);
+        setEditedWeight(meal.weight_grams);
+        setEditedCalories(meal.nutrition.calories);
+        setEditedProtein(meal.nutrition.protein);
+        setEditedCarbs(meal.nutrition.carbs);
+        setEditedFat(meal.nutrition.fat);
       } else if (finalResult) {
         setResult(finalResult);
       } else if (!isLowConfidence) {
