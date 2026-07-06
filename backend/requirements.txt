@@ -6,5 +6,6 @@ sqlalchemy==2.0.43
 httpx==0.28.1
 pillow==11.0.0
 google-genai==1.61.0
+langgraph==1.2.7
 pytest==8.3.4
 pytest-asyncio==0.25.3

@@ -88,9 +88,63 @@ async def analyze_image(
         return error_response(ErrorCode.IMAGE_TOO_LARGE)
 
     try:
-        # Step into the orchestration layer for processing
-        result = await meal_service.analyze(image_bytes, db)
-        return {"status": "success", "data": result}
+        # Step 1: Run the LangGraph flow
+        from src.agents.graph import run_analysis_graph
+        state = await run_analysis_graph(image_bytes)
+
+        # Step 2: Handle graph errors
+        if state.get("error"):
+            raise state["error"]
+
+        result = state["vision_result"]
+
+        # Step 3: Enforce confidence threshold before persistence
+        from src.services.meal_service import CONFIDENCE_THRESHOLD
+        if result.confidence < CONFIDENCE_THRESHOLD:
+            raise LowConfidenceError(result.confidence)
+
+        # Step 4: Persist the result to the database
+        from src.db.repository import MealRepository
+        MealRepository(db).save({
+            "food_name":          result.food_name,
+            "cuisine":            result.cuisine,
+            "meal_type":          result.meal_type,
+            "preparation_method": result.preparation_method,
+            "weight_grams":       result.estimated_weight_grams,
+            "confidence":         result.confidence,
+            "calories":           result.calories,
+            "protein":            result.protein,
+            "carbs":              result.carbs,
+            "fat":                result.fat,
+            "fiber":              result.fiber,
+            "sodium":             result.sodium,
+            "ingredients":        result.ingredients,
+            "per_100g":           result.per_100g,
+            "nutrition_source":   "Gemini",
+            "is_estimated":       0,
+        })
+
+        # Step 5: Format the response in the exact same shape
+        formatted_result = {
+            "food_name":   result.food_name,
+            "confidence":  result.confidence,
+            "ingredients": result.ingredients,
+            "weight_grams": result.estimated_weight_grams,
+            "meal_type":   result.meal_type,
+            "cuisine":     result.cuisine,
+            "nutrition": {
+                "calories": result.calories,
+                "protein":  result.protein,
+                "carbs":    result.carbs,
+                "fat":      result.fat,
+                "fiber":    result.fiber,
+                "sodium":   result.sodium,
+                "per_100g": result.per_100g,
+                "source":   "Gemini",
+                "is_estimated": False,
+            },
+        }
+        return {"status": "success", "data": formatted_result}
 
     except LowConfidenceError as e:
         return error_response(e.error_code, f"confidence={e.confidence:.0%}")
