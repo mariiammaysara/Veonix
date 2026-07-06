@@ -60,15 +60,71 @@ async def vision_node(state: AnalysisState) -> dict:
 
 async def history_node(state: AnalysisState) -> dict:
     """
-    A graph node that queries user meal history using safe database tool.
+    A graph node that queries user meal history using safe database tool,
+    or falls back to local RAG knowledge / Tavily web search for general nutrition questions.
     """
     try:
-        if not state.get("question"):
+        question = state.get("question")
+        if not question:
             raise ValueError("No question provided for history_node.")
             
-        from src.agents.tools.sql_tool import query_meal_history
-        answer = await query_meal_history(state["question"])
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
         
+        # 1. Classify the user question into history vs knowledge
+        CLASSIFY_PROMPT = f"""
+        You are an AI assistant routing user queries to the correct tool.
+        Analyze the user's question and classify it into one of these categories:
+        - "history": If the user is asking about their logged meals, meal stats, history, calories consumed, protein consumed, etc. (e.g., "what did I eat today?", "how many calories did I eat this week?")
+        - "knowledge": If the user is asking a general nutrition or health question not related to their personal logged history (e.g., "how much protein is in an egg?", "what are the benefits of hydration?", "how to calculate calorie deficit?")
+
+        User Question: "{question}"
+
+        Return ONLY "history" or "knowledge". No other text.
+        """
+        
+        classify_resp = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[CLASSIFY_PROMPT],
+            config=types.GenerateContentConfig(temperature=0.0)
+        )
+        category = classify_resp.text.strip().lower()
+        logger.info(f"Classified query '{question}' as category: {category}")
+        
+        if "history" in category:
+            # Personal history query path
+            from src.agents.tools.sql_tool import query_meal_history
+            answer = await query_meal_history(question)
+        else:
+            # Nutrition knowledge path (RAG with Tavily Web Search fallback)
+            from src.agents.tools.rag_tool import search_nutrition_knowledge
+            rag_result = await search_nutrition_knowledge(question)
+            
+            if rag_result:
+                db_summary = f"Source: Local Knowledge Base Reference Document, Content: {rag_result}"
+                logger.info("Found relevant local RAG context.")
+            else:
+                from src.agents.tools.tavily_tool import search_tavily
+                logger.info("Local RAG context missing or below threshold. Falling back to Tavily.")
+                web_result = await search_tavily(question)
+                db_summary = f"Source: Web Search Result, Content: {web_result}"
+                
+            # Use Gemini to construct a friendly, conversational coach response based on context
+            FORMAT_PROMPT = f"""
+            You are a friendly AI nutrition coach. Answer the user's question about nutrition/health using the provided information source.
+            
+            User Question: "{question}"
+            Information Source Details: {db_summary}
+            
+            Be concise, helpful, and direct. Translate the source information into a friendly response.
+            """
+            
+            format_resp = await client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[FORMAT_PROMPT],
+                config=types.GenerateContentConfig(temperature=0.3)
+            )
+            answer = format_resp.text.strip()
+            
         return {
             "history_answer": answer,
             "error": None

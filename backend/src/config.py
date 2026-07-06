@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # ── Gemini Configuration ──────────────────────────────────
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    TAVILY_API_KEY: str = ""
 
     # ── Database Configuration ────────────────────────────────
     DATABASE_URL: str = "sqlite:///./veonix.db"
