@@ -81,3 +81,30 @@ export interface AnalysisResponse {
     analysis: MealResult;
 }
 
+export interface StreamEvent {
+    event: "start" | "profile" | "vision_start" | "vision_done" | "allergy_check" | "saving" | "pending_confirmation" | "done" | "error" | "low_confidence";
+    message: string;
+    thread_id?: string;
+    food_name?: string;
+    confidence?: number;
+    result?: MealResult;
+    code?: string;
+}
+
+export interface BatchMealResult extends MealResult {
+    allergies_warning?: string | null;
+}
+
+export interface BatchAggregate {
+    total_calories: number;
+    total_protein: number;
+    total_carbs: number;
+    total_fat: number;
+    total_fiber: number;
+    total_sodium: number;
+}
+
+export interface BatchResult {
+    meals: (BatchMealResult | null)[];
+    aggregate: BatchAggregate;
+}

@@ -162,6 +162,248 @@ async def analyze_image(
         return error_response(ErrorCode.INTERNAL_ERROR)
 
 
+# ── SSE Streaming Endpoint ────────────────────────────────────────────────────
+
+import json as _json
+from fastapi.responses import StreamingResponse
+
+
+def _sse(event: str, data: dict) -> str:
+    """Format a single SSE line: `data: {...}\n\n`"""
+    return f"data: {_json.dumps({'event': event, **data})}\n\n"
+
+
+async def _stream_image_analysis(image_bytes: bytes) -> None:
+    """
+    Async generator that drives each vision pipeline step manually,
+    yielding SSE events between steps so the frontend can display
+    real-time progress without polling.
+
+    Yields:
+        SSE-formatted strings with named progress events.
+    """
+    import uuid
+    from src.helpers.image_processor import compress_image
+    from src.providers.vision.factory import get_vision_provider
+    from src.helpers.prompts import build_vision_prompt
+    from src.agents.store import NutritionCoachingStore
+    from src.agents.supervisor import main_graph
+    from src.services.meal_service import CONFIDENCE_THRESHOLD
+
+    thread_id = str(uuid.uuid4())
+
+    try:
+        # Step 1: compress
+        yield _sse("start", {"message": "Compressing image...", "thread_id": thread_id})
+        compressed = compress_image(image_bytes)
+
+        # Step 2: load profile for goal-aware prompt
+        yield _sse("profile", {"message": "Loading profile..."})
+        store = NutritionCoachingStore()
+        profile = store.get_profile()
+        dietary_goal = profile.get("dietary_goal")
+        prompt = build_vision_prompt(dietary_goal)
+
+        # Step 3: call vision model
+        yield _sse("vision_start", {"message": "Calling vision model..."})
+        provider = get_vision_provider()
+        result = await provider.analyze(compressed, prompt=prompt)
+        yield _sse("vision_done", {
+            "message": f"Food identified: {result.food_name}",
+            "food_name": result.food_name,
+            "confidence": result.confidence,
+        })
+
+        # Step 4: confidence check
+        if result.confidence < CONFIDENCE_THRESHOLD:
+            yield _sse("low_confidence", {
+                "message": "Low confidence — please retake photo",
+                "confidence": result.confidence,
+            })
+            return
+
+        # Step 5: allergy check
+        yield _sse("allergy_check", {"message": "Checking allergies..."})
+        allergies = [a.strip().lower() for a in profile.get("allergies", []) if a.strip()]
+        food_lower = result.food_name.lower()
+        ingredients = [i.lower() for i in (result.ingredients or [])]
+        matched = []
+        for allergy in allergies:
+            if allergy in food_lower or any(allergy in ing for ing in ingredients):
+                matched.append(allergy)
+        allergies_warning = (
+            f"Warning: may contain allergens: {', '.join(matched)}." if matched else None
+        )
+
+        # Step 6: format result
+        formatted = {
+            "food_name": result.food_name,
+            "confidence": result.confidence,
+            "ingredients": result.ingredients,
+            "weight_grams": result.estimated_weight_grams,
+            "meal_type": result.meal_type,
+            "cuisine": result.cuisine,
+            "allergies_warning": allergies_warning,
+            "nutrition": {
+                "calories": result.calories,
+                "protein": result.protein,
+                "carbs": result.carbs,
+                "fat": result.fat,
+                "fiber": result.fiber,
+                "sodium": result.sodium,
+                "per_100g": result.per_100g,
+                "source": "Gemini",
+                "is_estimated": False,
+            },
+        }
+
+        # Step 7: invoke supervisor graph → triggers HITL breakpoint
+        yield _sse("saving", {"message": "Awaiting confirmation..."})
+        from src.agents.graph import run_analysis_graph
+        state = await run_analysis_graph(image_bytes=image_bytes, thread_id=thread_id)
+        config = {"configurable": {"thread_id": thread_id}}
+        state_info = await main_graph.aget_state(config)
+
+        if "persist_node" in state_info.next:
+            yield _sse("pending_confirmation", {
+                "message": "Pending your confirmation before saving.",
+                "thread_id": thread_id,
+                "result": formatted,
+            })
+        else:
+            yield _sse("done", {
+                "message": "Analysis complete.",
+                "thread_id": thread_id,
+                "result": formatted,
+            })
+
+    except LowConfidenceError as e:
+        yield _sse("error", {"message": f"Low confidence: {e.confidence:.0%}", "code": "LOW_CONFIDENCE"})
+    except Exception as e:
+        logger.exception(f"Stream error: {e}")
+        yield _sse("error", {"message": "Analysis failed. Please try again.", "code": "INTERNAL_ERROR"})
+
+
+@router.post("/image/stream")
+async def analyze_image_stream(file: UploadFile = File(...)):
+    """
+    Streams vision analysis progress as Server-Sent Events (SSE).
+    Each event is a JSON line: `data: {"event": "...", "message": "..."}\n\n`
+
+    Events in order:
+      start → profile → vision_start → vision_done →
+      allergy_check → saving → pending_confirmation | done | error
+    """
+    if file.content_type not in ALLOWED_TYPES:
+        return error_response(ErrorCode.INVALID_IMAGE_FORMAT)
+
+    image_bytes = await file.read()
+
+    if len(image_bytes) > MAX_SIZE_BYTES:
+        return error_response(ErrorCode.IMAGE_TOO_LARGE)
+
+    return StreamingResponse(
+        _stream_image_analysis(image_bytes),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering for true streaming
+        },
+    )
+
+
+# ── Batch Analysis Endpoint ───────────────────────────────────────────────────
+
+from typing import List
+
+
+@router.post("/images/batch")
+async def analyze_images_batch(
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload multiple food images and receive parallel nutrition analysis.
+    Fan-out: all images analyzed concurrently via asyncio.gather.
+    Reduce: aggregate totals (calories, protein, carbs, fat) computed after.
+
+    Bypasses HITL confirmation — batch saves immediately.
+
+    Args:
+        files: Up to 10 image files (JPEG, PNG, WEBP), each ≤10 MB.
+
+    Returns:
+        { meals: [...per-meal results], aggregate: { total_calories, ... } }
+    """
+    MAX_BATCH = 10
+
+    if len(files) > MAX_BATCH:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "error": {
+                    "code": "BATCH_TOO_LARGE",
+                    "message": f"Maximum {MAX_BATCH} images per batch.",
+                    "detail": f"Received {len(files)}",
+                },
+            },
+        )
+
+    if len(files) == 0:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "error": {
+                    "code": "NO_FILES",
+                    "message": "At least one image is required.",
+                    "detail": "",
+                },
+            },
+        )
+
+    # Validate + read all files upfront before launching parallel jobs
+    images: list[bytes] = []
+    for i, f in enumerate(files):
+        if f.content_type not in ALLOWED_TYPES:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "status": "error",
+                    "error": {
+                        "code": "INVALID_IMAGE_FORMAT",
+                        "message": f"File {i + 1} has unsupported type: {f.content_type}",
+                        "detail": "",
+                    },
+                },
+            )
+        raw = await f.read()
+        if len(raw) > MAX_SIZE_BYTES:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "status": "error",
+                    "error": {
+                        "code": "IMAGE_TOO_LARGE",
+                        "message": f"File {i + 1} exceeds the 10 MB limit.",
+                        "detail": "",
+                    },
+                },
+            )
+        images.append(raw)
+
+    try:
+        from src.agents.batch import analyze_images_parallel
+        batch_result = await analyze_images_parallel(images)
+        return {"status": "success", "data": batch_result}
+
+    except Exception as e:
+        logger.exception(f"Batch analysis error: {e}")
+        return error_response(ErrorCode.INTERNAL_ERROR, str(e))
+
+
+
 @router.get("/history")
 def get_history(
     limit: int = 50,

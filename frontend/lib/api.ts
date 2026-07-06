@@ -13,6 +13,8 @@ import type {
   ApiErrorResponse,
   UserProfile,
   AnalysisResponse,
+  StreamEvent,
+  BatchResult,
 } from "./types";
 
 const BASE_URL =
@@ -92,6 +94,92 @@ export async function analyzeImage(file: File): Promise<AnalysisResponse> {
     status: "success",
     analysis: body.data,
   };
+}
+
+/**
+ * analyzeImageStream — streams SSE analysis progress events.
+ *
+ * Opens a fetch SSE connection to POST /analyze/image/stream and calls
+ * onEvent for each parsed event line. The final event carries the full result.
+ *
+ * @param file     The image file to analyze.
+ * @param onEvent  Callback called for every received SSE event object.
+ */
+export async function analyzeImageStream(
+  file: File,
+  onEvent: (event: StreamEvent) => void
+): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const response = await fetch(`${BASE_URL}/analyze/image/stream`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!response.ok || !response.body) {
+    throw new ApiError("Stream request failed", response.status);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE lines are separated by double newlines; parse complete events only
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? ""; // keep the incomplete last part
+
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line.startsWith("data:")) continue;
+      const jsonStr = line.slice(5).trim();
+      try {
+        const event = JSON.parse(jsonStr) as StreamEvent;
+        onEvent(event);
+      } catch {
+        // malformed line — skip
+      }
+    }
+  }
+}
+
+/**
+ * analyzeBatch — uploads N images in parallel for batch analysis.
+ *
+ * POST /analyze/images/batch with all files as FormData entries.
+ * Returns per-meal results and aggregated nutrition totals.
+ */
+export async function analyzeBatch(files: File[]): Promise<BatchResult> {
+  const form = new FormData();
+  for (const file of files) {
+    form.append("files", file);
+  }
+
+  const response = await fetch(`${BASE_URL}/analyze/images/batch`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!response.ok) {
+    let errorBody: ApiErrorResponse | null = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      // ignore
+    }
+    const message = errorBody?.error?.message ?? "Batch analysis failed.";
+    const code = errorBody?.error?.code ?? "UNKNOWN_ERROR";
+    throw new ApiError(message, response.status, code);
+  }
+
+  const body = await response.json();
+  return body.data as BatchResult;
 }
 
 export async function getMealHistory(

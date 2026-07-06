@@ -3,13 +3,25 @@
 import React, { useState, useCallback, useRef } from "react";
 
 interface Props {
+  /** Called when a single file is selected (single-upload flow). */
   onFile: (file: File | null) => void;
+  /** Called when multiple files are selected (batch flow). */
+  onFiles?: (files: File[]) => void;
   preview: string | null;
   onAnalyze: () => void;
   isLowConfidence?: boolean;
+  /** Multi-file mode previews — base64 data URLs, one per file. */
+  previews?: string[];
 }
 
-export default function UploadBox({ onFile, preview, onAnalyze, isLowConfidence = false }: Props) {
+export default function UploadBox({
+  onFile,
+  onFiles,
+  preview,
+  onAnalyze,
+  isLowConfidence = false,
+  previews = [],
+}: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -18,12 +30,108 @@ export default function UploadBox({ onFile, preview, onAnalyze, isLowConfidence 
     setIsDragging(e.type === "dragover");
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);
-  }, [onFile]);
+  const handleFileChange = useCallback(
+    (fileList: FileList | null) => {
+      if (!fileList || fileList.length === 0) return;
 
+      if (fileList.length > 1 && onFiles) {
+        // Multi-file mode
+        onFiles(Array.from(fileList));
+      } else {
+        // Single-file mode (backward-compatible)
+        onFile(fileList[0]);
+      }
+    },
+    [onFile, onFiles]
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      handleFileChange(e.dataTransfer.files);
+    },
+    [handleFileChange]
+  );
+
+  // ── Multi-file batch preview ──────────────────────────────────────────────
+  if (previews.length > 1) {
+    return (
+      <div className="anim-scale-in" style={{ width: "100%", maxWidth: "min(520px, 100%)", margin: "0 auto" }}>
+        {/* Thumbnail strip */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${Math.min(previews.length, 3)}, 1fr)`,
+          gap: "8px",
+          marginBottom: "12px",
+        }}>
+          {previews.map((src, i) => (
+            <div key={i} style={{ position: "relative", borderRadius: "12px", overflow: "hidden", aspectRatio: "1", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <img src={src} alt={`Image ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {/* Meal index badge */}
+              <div style={{
+                position: "absolute", top: "6px", left: "6px",
+                background: "rgba(16,185,129,0.85)", borderRadius: "6px",
+                padding: "2px 7px", fontSize: "11px", fontWeight: 700, color: "#020617",
+              }}>
+                #{i + 1}
+              </div>
+            </div>
+          ))}
+          {previews.length > 3 && (
+            <div style={{
+              borderRadius: "12px", background: "rgba(255,255,255,0.03)",
+              border: "1px dashed rgba(255,255,255,0.08)", display: "flex",
+              alignItems: "center", justifyContent: "center", aspectRatio: "1",
+            }}>
+              <span style={{ fontSize: "13px", color: "#64748b" }}>+{previews.length - 3} more</span>
+            </div>
+          )}
+        </div>
+
+        {/* Action bar */}
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              padding: "10px 16px", background: "rgba(2,6,23,0.85)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "12px", color: "#475569", fontSize: "14px", fontWeight: 500, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "6px", backdropFilter: "blur(8px)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" />
+            </svg>
+            Change
+          </button>
+          <button
+            onClick={onAnalyze}
+            className="btn-glow"
+            style={{
+              flex: 1, padding: "10px", background: "linear-gradient(135deg,#10b981,#059669)", border: "none",
+              borderRadius: "12px", color: "#020617", fontSize: "15px", fontWeight: 700, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#020617" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            Analyze {previews.length} meals
+          </button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => handleFileChange(e.target.files)}
+          className="hidden"
+        />
+      </div>
+    );
+  }
+
+  // ── Single-image preview ──────────────────────────────────────────────────
   if (preview) {
     return (
       <div className="anim-scale-in" style={{ width: "100%", maxWidth: "min(480px, 100%)", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.05)", overflow: "hidden", position: "relative", margin: "0 auto" }}>
@@ -51,12 +159,12 @@ export default function UploadBox({ onFile, preview, onAnalyze, isLowConfidence 
             Analyze meal
           </button>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} className="hidden" />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e.target.files)} className="hidden" />
       </div>
     );
   }
 
-  // Warning colors if RAG/vision returned low confidence and retake is required
+  // ── Empty drop zone ───────────────────────────────────────────────────────
   const borderCol = isLowConfidence
     ? (isDragging ? "rgba(245,158,11,0.35)" : "rgba(245,158,11,0.22)")
     : (isDragging ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.06)");
@@ -85,7 +193,7 @@ export default function UploadBox({ onFile, preview, onAnalyze, isLowConfidence 
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 20px 24px", gap: "14px" }}>
-        {/* Icon ring — float when empty */}
+        {/* Floating upload icon */}
         <div className="anim-float" style={{ width: "54px", height: "54px", borderRadius: "16px", background: iconRingBg, border: `1px solid ${iconRingBorder}`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
           <div style={{ position: "absolute", inset: "-6px", borderRadius: "24px", border: `1px dashed ${dashedRingBorder}` }} />
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -102,7 +210,10 @@ export default function UploadBox({ onFile, preview, onAnalyze, isLowConfidence 
           ) : (
             <>
               <p style={{ fontSize: "16px", fontWeight: 600, color: "#cbd5e1", textAlign: "center" }}>Drop your meal photo here</p>
-              <p style={{ fontSize: "12px", color: "#475569", textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>Works best with clear, well-lit photos<br />JPG · PNG · WEBP · up to 10 MB</p>
+              <p style={{ fontSize: "12px", color: "#475569", textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>
+                Select multiple images for batch analysis<br />
+                JPG · PNG · WEBP · up to 10 MB each
+              </p>
             </>
           )}
         </div>
@@ -115,7 +226,14 @@ export default function UploadBox({ onFile, preview, onAnalyze, isLowConfidence 
           Browse files
         </button>
       </div>
-      <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} className="hidden" />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(e) => handleFileChange(e.target.files)}
+        className="hidden"
+      />
     </div>
   );
 }
