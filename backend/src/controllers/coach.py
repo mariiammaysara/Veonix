@@ -16,6 +16,9 @@ from src.agents.graph import run_analysis_graph
 from src.controllers.analyze import error_response
 from src.enums.error_codes import ErrorCode
 
+from langfuse import observe, propagate_attributes
+from langfuse.langchain import CallbackHandler
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/coach", tags=["Coach"])
@@ -66,6 +69,7 @@ class ConfirmRequest(BaseModel):
 
 
 @router.post("/confirm/{thread_id}")
+@observe(name="veonix-confirm-recommendation")
 async def confirm_recommendation(thread_id: str, payload: ConfirmRequest):
     """
     Resumes the graph after user approval/editing or discards if rejected.
@@ -90,25 +94,46 @@ async def confirm_recommendation(thread_id: str, payload: ConfirmRequest):
         if payload.edits:
             current_result = state_info.values.get("vision_result")
             if current_result:
-                # Merge user edits into VisionResult dataclass
-                updated_result = VisionResult(
-                    food_name=payload.edits.get("food_name", current_result.food_name),
-                    confidence=current_result.confidence,
-                    ingredients=payload.edits.get("ingredients", current_result.ingredients),
-                    estimated_weight_grams=int(payload.edits.get("weight_grams", current_result.estimated_weight_grams)),
-                    meal_type=payload.edits.get("meal_type", current_result.meal_type),
-                    cuisine=payload.edits.get("cuisine", current_result.cuisine),
-                    calories=float(payload.edits.get("calories", current_result.calories)),
-                    protein=float(payload.edits.get("protein", current_result.protein)),
-                    carbs=float(payload.edits.get("carbs", current_result.carbs)),
-                    fat=float(payload.edits.get("fat", current_result.fat)),
-                    fiber=float(payload.edits.get("fiber", current_result.fiber or 0.0)),
-                    sodium=float(payload.edits.get("sodium", current_result.sodium or 0.0)),
-                    per_100g=current_result.per_100g
-                )
-                await main_graph.aupdate_state(config, {"vision_result": updated_result}, as_node="vision_node")
+                import dataclasses
+
+                updates = {}
+                # Mapping of payload edits to VisionResult fields
+                mapping = {
+                    "food_name": ("food_name", str),
+                    "ingredients": ("ingredients", list),
+                    "weight_grams": ("estimated_weight_grams", int),
+                    "meal_type": ("meal_type", str),
+                    "cuisine": ("cuisine", str),
+                    "preparation_method": ("preparation_method", str),
+                    "calories": ("calories", float),
+                    "protein": ("protein", float),
+                    "carbs": ("carbs", float),
+                    "fat": ("fat", float),
+                    "fiber": ("fiber", float),
+                    "sodium": ("sodium", float),
+                }
+
+                for src_key, (dest_key, cast_type) in mapping.items():
+                    if src_key in payload.edits:
+                        val = payload.edits[src_key]
+                        if val is not None:
+                            try:
+                                updates[dest_key] = cast_type(val)
+                            except (ValueError, TypeError):
+                                pass
+
+                if updates:
+                    updated_result = dataclasses.replace(current_result, **updates)
+                    await main_graph.aupdate_state(config, {"vision_result": updated_result}, as_node="vision_node")
 
         # Resume graph execution
+        with propagate_attributes(
+            session_id=thread_id,
+            tags=["confirm"]
+        ):
+            langfuse_handler = CallbackHandler()
+        config["callbacks"] = config.get("callbacks", []) + [langfuse_handler]
+
         resumed_state = await main_graph.ainvoke(None, config=config)
         if resumed_state.get("error"):
             raise resumed_state["error"]

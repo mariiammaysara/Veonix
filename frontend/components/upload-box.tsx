@@ -3,14 +3,11 @@
 import React, { useState, useCallback, useRef } from "react";
 
 interface Props {
-  /** Called when a single file is selected (single-upload flow). */
   onFile: (file: File | null) => void;
-  /** Called when multiple files are selected (batch flow). */
   onFiles?: (files: File[]) => void;
   preview: string | null;
   onAnalyze: () => void;
   isLowConfidence?: boolean;
-  /** Multi-file mode previews — base64 data URLs, one per file. */
   previews?: string[];
 }
 
@@ -33,12 +30,9 @@ export default function UploadBox({
   const handleFileChange = useCallback(
     (fileList: FileList | null) => {
       if (!fileList || fileList.length === 0) return;
-
       if (fileList.length > 1 && onFiles) {
-        // Multi-file mode
         onFiles(Array.from(fileList));
       } else {
-        // Single-file mode (backward-compatible)
         onFile(fileList[0]);
       }
     },
@@ -57,50 +51,63 @@ export default function UploadBox({
   // ── Multi-file batch preview ──────────────────────────────────────────────
   if (previews.length > 1) {
     return (
-      <div className="anim-scale-in" style={{ width: "100%", maxWidth: "min(520px, 100%)", margin: "0 auto" }}>
-        {/* Thumbnail strip */}
+      <div className="anim-scale-in" style={{ width: "100%", maxWidth: "480px", margin: "0 auto" }}>
         <div style={{
           display: "grid",
           gridTemplateColumns: `repeat(${Math.min(previews.length, 3)}, 1fr)`,
           gap: "8px",
-          marginBottom: "12px",
+          marginBottom: "14px",
         }}>
           {previews.map((src, i) => (
-            <div key={i} style={{ position: "relative", borderRadius: "12px", overflow: "hidden", aspectRatio: "1", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={i} style={{
+              position: "relative",
+              borderRadius: "12px",
+              overflow: "hidden",
+              aspectRatio: "1",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}>
               <img src={src} alt={`Image ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              {/* Meal index badge */}
               <div style={{
-                position: "absolute", top: "6px", left: "6px",
-                background: "rgba(16,185,129,0.85)", borderRadius: "6px",
-                padding: "2px 7px", fontSize: "11px", fontWeight: 700, color: "#020617",
+                position: "absolute", top: "8px", left: "8px",
+                background: "rgba(16,185,129,0.9)",
+                borderRadius: "6px", padding: "2px 7px",
+                fontSize: "10px", fontWeight: 700, color: "#020617",
               }}>
-                #{i + 1}
+                {i + 1}
               </div>
             </div>
           ))}
           {previews.length > 3 && (
             <div style={{
-              borderRadius: "12px", background: "rgba(255,255,255,0.03)",
-              border: "1px dashed rgba(255,255,255,0.08)", display: "flex",
-              alignItems: "center", justifyContent: "center", aspectRatio: "1",
+              borderRadius: "12px",
+              background: "rgba(255,255,255,0.02)",
+              border: "1px dashed rgba(255,255,255,0.07)",
+              display: "flex", alignItems: "center", justifyContent: "center", aspectRatio: "1",
             }}>
               <span style={{ fontSize: "13px", color: "#64748b" }}>+{previews.length - 3} more</span>
             </div>
           )}
         </div>
 
-        {/* Action bar */}
         <div style={{ display: "flex", gap: "10px" }}>
           <button
             onClick={() => fileInputRef.current?.click()}
             style={{
-              padding: "10px 16px", background: "rgba(2,6,23,0.85)", border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "12px", color: "#475569", fontSize: "14px", fontWeight: 500, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: "6px", backdropFilter: "blur(8px)",
+              padding: "11px 16px",
+              background: "rgba(15,23,42,0.6)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "12px",
+              color: "#64748b",
+              fontSize: "13px",
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "6px",
+              transition: "all .2s",
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4v6h6M23 20v-6h-6" />
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" />
             </svg>
             Change
           </button>
@@ -108,25 +115,24 @@ export default function UploadBox({
             onClick={onAnalyze}
             className="btn-glow"
             style={{
-              flex: 1, padding: "10px", background: "linear-gradient(135deg,#10b981,#059669)", border: "none",
-              borderRadius: "12px", color: "#020617", fontSize: "15px", fontWeight: 700, cursor: "pointer",
+              flex: 1, padding: "11px",
+              background: "linear-gradient(135deg,#10b981,#059669)",
+              border: "none", borderRadius: "12px",
+              color: "#020617", fontSize: "14px", fontWeight: 700,
+              cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+              boxShadow: "0 4px 16px rgba(16,185,129,0.22)",
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#020617" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#020617" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
             Analyze {previews.length} meals
           </button>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={(e) => handleFileChange(e.target.files)}
-          className="hidden"
-        />
+
+        <input ref={fileInputRef} type="file" accept="image/*" multiple
+          onChange={(e) => handleFileChange(e.target.files)} className="hidden" />
       </div>
     );
   }
@@ -134,98 +140,187 @@ export default function UploadBox({
   // ── Single-image preview ──────────────────────────────────────────────────
   if (preview) {
     return (
-      <div className="anim-scale-in" style={{ width: "100%", maxWidth: "min(480px, 100%)", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.05)", overflow: "hidden", position: "relative", margin: "0 auto" }}>
-        <img src={preview} alt="Preview" style={{ width: "100%", height: "clamp(200px, 30vh, 320px)", objectFit: "cover", display: "block" }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "110px", background: "linear-gradient(to top,rgba(2,6,23,0.97),transparent)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px", display: "flex", gap: "10px" }}>
-          <button onClick={() => fileInputRef.current?.click()} style={{
-            padding: "10px 16px", background: "rgba(2,6,23,0.85)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "12px", color: "#475569", fontSize: "14px", fontWeight: 500, cursor: "pointer",
-            display: "flex", alignItems: "center", gap: "6px", backdropFilter: "blur(8px)"
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" />
+      <div className="anim-scale-in" style={{
+        width: "100%",
+        maxWidth: "440px",
+        borderRadius: "20px",
+        border: "1px solid rgba(255,255,255,0.07)",
+        overflow: "hidden",
+        position: "relative",
+        margin: "0 auto",
+        boxShadow: "0 16px 40px rgba(0,0,0,0.3)",
+      }}>
+        <img
+          src={preview}
+          alt="Preview"
+          style={{
+            width: "100%",
+            height: "clamp(200px, 32vh, 300px)",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+        {/* Gradient overlay */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, height: "120px",
+          background: "linear-gradient(to top,rgba(2,6,23,0.98) 0%,rgba(2,6,23,0.6) 60%,transparent 100%)",
+          pointerEvents: "none",
+        }} />
+        {/* Action buttons */}
+        <div style={{
+          position: "absolute", bottom: "16px", left: "16px", right: "16px",
+          display: "flex", gap: "10px",
+        }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              padding: "10px 14px",
+              background: "rgba(2,6,23,0.7)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "12px",
+              color: "#64748b",
+              fontSize: "13px",
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "6px",
+              backdropFilter: "blur(12px)",
+              transition: "all .2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#64748b")}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4v6h6M23 20v-6h-6" />
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" />
             </svg>
             Change
           </button>
-          <button onClick={onAnalyze} className="btn-glow" style={{
-            flex: 1, padding: "10px", background: "#10b981", border: "none", borderRadius: "12px",
-            color: "#020617", fontSize: "15px", fontWeight: 700, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
-          }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#020617" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <button
+            onClick={onAnalyze}
+            className="btn-glow"
+            style={{
+              flex: 1, padding: "10px",
+              background: "linear-gradient(135deg,#10b981,#059669)",
+              border: "none", borderRadius: "12px",
+              color: "#020617", fontSize: "14px", fontWeight: 700,
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+              boxShadow: "0 4px 16px rgba(16,185,129,0.25)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#020617" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
             Analyze meal
           </button>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e.target.files)} className="hidden" />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple
+          onChange={(e) => handleFileChange(e.target.files)} className="hidden" />
       </div>
     );
   }
 
   // ── Empty drop zone ───────────────────────────────────────────────────────
-  const borderCol = isLowConfidence
-    ? (isDragging ? "rgba(245,158,11,0.35)" : "rgba(245,158,11,0.22)")
-    : (isDragging ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.06)");
-
-  const bgCol = isLowConfidence
-    ? "rgba(245,158,11,0.02)"
-    : (isDragging ? "rgba(16,185,129,0.025)" : "rgba(10,18,38,0.6)");
-
-  const iconStroke = isLowConfidence ? "#fbbf24" : "#34d399";
-  const iconRingBg = isLowConfidence ? "rgba(245,158,11,0.05)" : "rgba(16,185,129,0.06)";
-  const iconRingBorder = isLowConfidence ? "rgba(245,158,11,0.12)" : "rgba(16,185,129,0.12)";
-  const dashedRingBorder = isLowConfidence ? "rgba(245,158,11,0.08)" : "rgba(16,185,129,0.1)";
+  const accentColor = isLowConfidence ? "#fbbf24" : "#10b981";
+  const accentAlpha = isLowConfidence ? "rgba(245,158,11," : "rgba(16,185,129,";
 
   return (
     <div
-      onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
+      onDragOver={handleDrag}
+      onDragLeave={handleDrag}
+      onDrop={handleDrop}
       onClick={() => fileInputRef.current?.click()}
       className="anim-scale-in"
       style={{
-        width: "100%", maxWidth: "min(480px, 100%)", borderRadius: "20px",
-        background: bgCol,
-        border: `1.5px dashed ${borderCol}`,
-        cursor: "pointer", transition: "all .2s ease",
+        width: "100%",
+        maxWidth: "440px",
         margin: "0 auto",
-        transform: isDragging ? "scale(1.02)" : "scale(1)"
+        borderRadius: "20px",
+        background: isDragging
+          ? `${accentAlpha}0.04)`
+          : "rgba(10,18,38,0.5)",
+        border: `1.5px dashed ${isDragging ? `${accentAlpha}0.35)` : isLowConfidence ? `${accentAlpha}0.22)` : "rgba(255,255,255,0.08)"}`,
+        cursor: "pointer",
+        transition: "all .25s ease",
+        transform: isDragging ? "scale(1.015)" : "scale(1)",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 20px 24px", gap: "14px" }}>
-        {/* Floating upload icon */}
-        <div className="anim-float" style={{ width: "54px", height: "54px", borderRadius: "16px", background: iconRingBg, border: `1px solid ${iconRingBorder}`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-          <div style={{ position: "absolute", inset: "-6px", borderRadius: "24px", border: `1px dashed ${dashedRingBorder}` }} />
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" />
-            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-          </svg>
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "52px 28px 44px",
+        gap: "16px",
+      }}>
+        {/* Icon */}
+        <div className="anim-float" style={{
+          width: "56px", height: "56px",
+          borderRadius: "16px",
+          background: `${accentAlpha}0.07)`,
+          border: `1px solid ${accentAlpha}0.14)`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {isLowConfidence ? (
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          ) : (
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+          )}
         </div>
-        <div>
+
+        {/* Text */}
+        <div style={{ textAlign: "center" }}>
           {isLowConfidence ? (
             <>
-              <p style={{ fontSize: "16px", fontWeight: 600, color: "#f87171", textAlign: "center" }}>Low confidence — please retake photo</p>
-              <p style={{ fontSize: "12px", color: "#fca5a5", opacity: 0.85, textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>Make sure the food is clearly visible, centered,<br />and well-lit, then try uploading again.</p>
+              <p style={{ fontSize: "15px", fontWeight: 600, color: "#fbbf24", marginBottom: "6px" }}>
+                Low confidence — retake photo
+              </p>
+              <p style={{ fontSize: "12px", color: "#78716c", lineHeight: 1.7 }}>
+                Make sure the food is clearly visible,<br />well-lit, and centered.
+              </p>
             </>
           ) : (
             <>
-              <p style={{ fontSize: "16px", fontWeight: 600, color: "#cbd5e1", textAlign: "center" }}>Drop your meal photo here</p>
-              <p style={{ fontSize: "12px", color: "#475569", textAlign: "center", lineHeight: 1.5, marginTop: "6px" }}>
-                Select multiple images for batch analysis<br />
-                JPG · PNG · WEBP · up to 10 MB each
+              <p style={{ fontSize: "15px", fontWeight: 600, color: "#cbd5e1", marginBottom: "6px" }}>
+                Drop your meal photo here
+              </p>
+              <p style={{ fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
+                JPEG · PNG · WEBP · up to 10 MB<br />
+                Select multiple for batch analysis
               </p>
             </>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "180px" }}>
-          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.04)" }} />
-          <span style={{ fontSize: "11px", color: "#334155", textTransform: "uppercase", letterSpacing: ".08em" }}>or</span>
-          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.04)" }} />
+
+        {/* Divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "160px" }}>
+          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.05)" }} />
+          <span style={{ fontSize: "10px", color: "#334155", textTransform: "uppercase", letterSpacing: ".1em" }}>or</span>
+          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.05)" }} />
         </div>
-        <button style={{ padding: "8px 24px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "99px", color: "#475569", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>
+
+        {/* Browse button */}
+        <button style={{
+          padding: "9px 22px",
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: "99px",
+          color: "#64748b",
+          fontSize: "12px",
+          fontWeight: 500,
+          cursor: "pointer",
+          transition: "all .2s",
+        }}>
           Browse files
         </button>
       </div>
+
       <input
         ref={fileInputRef}
         type="file"

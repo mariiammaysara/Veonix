@@ -11,3 +11,5 @@ pytest==8.3.4
 pytest-asyncio==0.25.3
 alembic==1.13.1
 mcp==1.2.0
+langfuse
+langchain

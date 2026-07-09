@@ -19,6 +19,17 @@
   --card-softer: rgba(30, 41, 59, 0.6);
 }
 
+/* ── Step pulse for progress dot ── */
+@keyframes stepPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+  50%       { opacity: 0.75; box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+}
+
+.step-dot-active {
+  animation: stepPulse 1.6s ease-in-out infinite;
+}
+
+
 /* ── Entry animations ── */
 @keyframes fadeUp {
   from {

@@ -179,10 +179,16 @@ async def _stream_image_analysis(image_bytes: bytes) -> None:
     yielding SSE events between steps so the frontend can display
     real-time progress without polling.
 
+    PERFORMANCE NOTE: Gemini is called ONCE here (Step 3).
+    The pre-computed vision_result is then injected directly into the
+    LangGraph state so vision_node is bypassed, eliminating the
+    previously redundant second Gemini call.
+
     Yields:
         SSE-formatted strings with named progress events.
     """
     import uuid
+    import time
     from src.helpers.image_processor import compress_image
     from src.providers.vision.factory import get_vision_provider
     from src.helpers.prompts import build_vision_prompt
@@ -191,23 +197,33 @@ async def _stream_image_analysis(image_bytes: bytes) -> None:
     from src.services.meal_service import CONFIDENCE_THRESHOLD
 
     thread_id = str(uuid.uuid4())
+    t_request_start = time.perf_counter()
 
     try:
         # Step 1: compress
         yield _sse("start", {"message": "Compressing image...", "thread_id": thread_id})
+        t0 = time.perf_counter()
         compressed = compress_image(image_bytes)
+        logger.info(f"[PERF] compress_image: {(time.perf_counter()-t0)*1000:.1f}ms")
 
         # Step 2: load profile for goal-aware prompt
         yield _sse("profile", {"message": "Loading profile..."})
+        t0 = time.perf_counter()
         store = NutritionCoachingStore()
         profile = store.get_profile()
         dietary_goal = profile.get("dietary_goal")
         prompt = build_vision_prompt(dietary_goal)
+        logger.info(f"[PERF] profile_load: {(time.perf_counter()-t0)*1000:.1f}ms")
 
-        # Step 3: call vision model
+        # Step 3: call vision model — ONLY Gemini call in this pipeline
         yield _sse("vision_start", {"message": "Calling vision model..."})
+        t0 = time.perf_counter()
         provider = get_vision_provider()
         result = await provider.analyze(compressed, prompt=prompt)
+        logger.info(
+            f"[PERF] gemini_vision_call: {(time.perf_counter()-t0)*1000:.1f}ms "
+            f"| food='{result.food_name}' confidence={result.confidence:.0%}"
+        )
         yield _sse("vision_done", {
             "message": f"Food identified: {result.food_name}",
             "food_name": result.food_name,
@@ -257,12 +273,24 @@ async def _stream_image_analysis(image_bytes: bytes) -> None:
             },
         }
 
-        # Step 7: invoke supervisor graph → triggers HITL breakpoint
+        # Step 7: hand off pre-computed vision_result to the graph.
+        # The supervisor detects vision_result in state and skips vision_node,
+        # going directly to persist_node — eliminating the redundant Gemini call.
         yield _sse("saving", {"message": "Awaiting confirmation..."})
+        t0 = time.perf_counter()
         from src.agents.graph import run_analysis_graph
-        state = await run_analysis_graph(image_bytes=image_bytes, thread_id=thread_id)
+        state = await run_analysis_graph(
+            vision_result=result,
+            allergies_warning=allergies_warning,
+            thread_id=thread_id,
+        )
+        logger.info(f"[PERF] langgraph_invoke: {(time.perf_counter()-t0)*1000:.1f}ms")
         config = {"configurable": {"thread_id": thread_id}}
         state_info = await main_graph.aget_state(config)
+
+        logger.info(
+            f"[PERF] total_stream_pipeline: {(time.perf_counter()-t_request_start)*1000:.1f}ms"
+        )
 
         if "persist_node" in state_info.next:
             yield _sse("pending_confirmation", {

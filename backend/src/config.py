@@ -8,6 +8,7 @@ Loads environment variables and provides typed access to app settings.
 Author: Mariam Maysara
 """
 
+import os
 from pydantic_settings import BaseSettings
 
 
@@ -30,10 +31,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
 
-    # ── LangSmith / LangChain Tracing ─────────────────────────
-    LANGCHAIN_TRACING_V2: str = "false"
-    LANGCHAIN_API_KEY: str = ""
-    LANGCHAIN_PROJECT: str = "veonix"
+    # ── Langfuse Tracing ──────────────────────────────────────
+    # Generate public/secret keys from your self-hosted Langfuse instance's project settings after first login (http://localhost:3001).
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_SECRET_KEY: str = ""
+    LANGFUSE_HOST: str = "http://localhost:3001"
 
     class Config:
         env_file = ".env"
@@ -42,3 +44,12 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Sync Langfuse configurations to os.environ so the Langfuse SDK detects them
+if settings.LANGFUSE_PUBLIC_KEY:
+    os.environ["LANGFUSE_PUBLIC_KEY"] = settings.LANGFUSE_PUBLIC_KEY
+if settings.LANGFUSE_SECRET_KEY:
+    os.environ["LANGFUSE_SECRET_KEY"] = settings.LANGFUSE_SECRET_KEY
+if settings.LANGFUSE_HOST:
+    os.environ["LANGFUSE_HOST"] = settings.LANGFUSE_HOST
+

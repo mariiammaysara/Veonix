@@ -102,7 +102,18 @@ async def run_knowledge(state: AnalysisState) -> dict:
 # ── Supervisor Graph Definition ──────────────────────────────────────────────
 
 async def route_supervisor(state: AnalysisState) -> str:
-    """Conditional edge router executing state classification."""
+    """Conditional edge router executing state classification.
+
+    Fast path: if vision_result is already computed (injected by the streaming
+    endpoint), skip vision_node and go straight to persist_node to avoid the
+    redundant second Gemini call.
+    """
+    if state.get("vision_result") is not None:
+        logger.info(
+            "Supervisor: vision_result already present in state — "
+            "bypassing vision_node, routing directly to persist_node."
+        )
+        return "persist_node"
     return await route_request(state.get("image_bytes"), state.get("question"))
 
 
@@ -164,6 +175,7 @@ workflow.add_conditional_edges(
         "vision_node": "vision_node",
         "history_node": "history_node",
         "knowledge_node": "knowledge_node",
+        "persist_node": "persist_node",  # fast-path: skip vision_node when result pre-computed
         "END": END
     }
 )

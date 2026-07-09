@@ -23,6 +23,8 @@ from src.middleware.request_logger import RequestLoggerMiddleware
 from src.middleware.timing import TimingMiddleware
 # Agent-level trace middleware: injected per graph invocation (not HTTP middleware)
 from src.middleware.agent_trace import AgentTraceCallback  # noqa: F401
+from src.enums.error_codes import ErrorCode
+from src.controllers.analyze import error_response
 
 logger = logging.getLogger(__name__)
 
@@ -68,3 +70,11 @@ app.include_router(analyze_router)
 app.include_router(coach_router)
 app.include_router(profile_router)
 app.include_router(health_router)
+
+
+# Global Unhandled Exception Handler
+# Catches unexpected failures, logs them, and returns a JSON response with CORS headers.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc: Exception):
+    logger.exception(f"Unhandled exception caught globally: {exc}")
+    return error_response(ErrorCode.INTERNAL_ERROR, detail=str(exc))

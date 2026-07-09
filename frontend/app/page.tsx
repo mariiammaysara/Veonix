@@ -5,6 +5,14 @@ import Link from "next/link";
 import IntroScreen from "@/components/IntroScreen";
 import Navbar from "@/components/navbar";
 
+// TODO: replace with real values once tracked (see analytics/usage data)
+const STATS = [
+  { value: "—", label: "Meals Logged", color: "#34d399" },
+  { value: "—", label: "Accuracy Rate", color: "#38bdf8" },
+  { value: "—", label: "Average Analysis", color: "#34d399" },
+  { value: "—", label: "Privacy Protection", color: "#fb7185" }
+];
+
 export default function Home() {
   const [showContent, setShowContent] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -29,10 +37,46 @@ export default function Home() {
   if (!showContent) return <IntroScreen onComplete={() => setShowContent(true)} />;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col relative overflow-x-hidden" style={{
+      backgroundImage: `
+        radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.02) 0%, transparent 45%),
+        linear-gradient(rgba(255, 255, 255, 0.003) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.003) 1px, transparent 1px)
+      `,
+      backgroundSize: "100% 100%, 100% 100%, 80px 80px, 80px 80px"
+    }}>
+
+      {/* Global Floating background particles */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 0 }}>
+        {[
+          { top: "15%", left: "10%", size: "4px", delay: "0s", dur: "14s" },
+          { top: "35%", left: "80%", size: "6px", delay: "3s", dur: "18s" },
+          { top: "60%", left: "22%", size: "3px", delay: "1.5s", dur: "16s" },
+          { top: "78%", left: "75%", size: "5px", delay: "4s", dur: "15s" },
+          { top: "92%", left: "12%", size: "4px", delay: "2s", dur: "17s" },
+        ].map((pt, idx) => (
+          <div
+            key={idx}
+            style={{
+              position: "absolute",
+              top: pt.top,
+              left: pt.left,
+              width: pt.size,
+              height: pt.size,
+              borderRadius: "50%",
+              background: "rgba(52, 211, 153, 0.2)",
+              boxShadow: "0 0 8px rgba(52, 211, 153, 0.4)",
+              pointerEvents: "none",
+              animation: `float ${pt.dur} ease-in-out infinite`,
+              animationDelay: pt.delay,
+            }}
+          />
+        ))}
+      </div>
       
       {/* ── 1. Hero Section ── */}
-      <section style={{ position: "relative", width: "100%", overflow: "hidden" }}>
+      <section style={{ position: "relative", width: "100%", overflow: "hidden", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         
         {/* Floating background food icons limited to Hero */}
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 0 }}>
@@ -69,13 +113,13 @@ export default function Home() {
           width: "100%",
           maxWidth: "1100px",
           margin: "0 auto",
-          padding: "120px 24px 80px",
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: "48px",
+          padding: "40px 24px",
           position: "relative",
           zIndex: 1,
-        }} className="lg:grid-cols-2 items-center">
+          flex: 1,
+          display: "grid",
+          alignContent: "center"
+        }} className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           
           {/* Left Column: Headline copy */}
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -122,20 +166,20 @@ export default function Home() {
           {/* Right Column: Signature visual preview card */}
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
             <div className="anim-fade-up anim-float delay-2" style={{
-              width: "100%", maxWidth: "370px",
-              background: "rgba(15,23,42,0.65)", border: "1px solid rgba(255,255,255,0.05)",
-              borderRadius: "20px", padding: "18px", display: "flex", flexDirection: "column", gap: "12px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.3)"
+              width: "100%", maxWidth: "460px",
+              background: "rgba(20,32,58,0.65)", border: "1px solid rgba(16,185,129,0.12)",
+              borderRadius: "20px", padding: "22px", display: "flex", flexDirection: "column", gap: "16px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.3)", backdropFilter: "blur(12px)"
             }}>
               {/* Mock photo with sweep scan line */}
               <div style={{
-                position: "relative", width: "100%", height: "130px", borderRadius: "12px",
+                position: "relative", width: "100%", height: "160px", borderRadius: "12px",
                 background: "linear-gradient(135deg, rgba(16,185,129,0.06), rgba(56,189,248,0.08))",
                 display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
                 border: "1px solid rgba(255,255,255,0.04)"
               }}>
                 <div className="scan-line" />
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
                   <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
                 </svg>
               </div>
@@ -143,15 +187,15 @@ export default function Home() {
               {/* Title & Calories */}
               <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "15px", fontWeight: 700, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Grilled Salmon Plate</div>
-                  <div style={{ fontSize: "11px", color: "#475569", marginTop: "2px" }}>Mediterranean · Dinner · ~350g</div>
+                  <div style={{ fontSize: "17px", fontWeight: 700, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Grilled Salmon Plate</div>
+                  <div style={{ fontSize: "12px", color: "#475569", marginTop: "2px" }}>Mediterranean · Dinner · ~350g</div>
                 </div>
                 <div style={{
-                  display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px",
+                  display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px",
                   background: "rgba(249,115,22,0.06)", border: "1px solid rgba(249,115,22,0.14)", borderRadius: "8px", flexShrink: 0
                 }}>
-                  <span className="num-reveal delay-3" style={{ fontSize: "16px", fontWeight: 700, color: "#fb923c" }}>520</span>
-                  <span style={{ fontSize: "10px", color: "rgba(251,146,60,0.45)" }}>kcal</span>
+                  <span className="num-reveal delay-3" style={{ fontSize: "20px", fontWeight: 700, color: "#fb923c" }}>520</span>
+                  <span style={{ fontSize: "11px", color: "rgba(251,146,60,0.45)" }}>kcal</span>
                 </div>
               </div>
 
@@ -163,12 +207,12 @@ export default function Home() {
                   { label: "Fat", val: "32g", pct: 53, color: "#fb7185" },
                 ].map((mac, i) => (
                   <div key={mac.label} style={{
-                    background: "rgba(15,23,42,0.45)", border: "1px solid rgba(255,255,255,0.03)",
-                    borderRadius: "12px", padding: "10px 8px"
+                    background: "rgba(20,32,58,0.4)", border: "1px solid rgba(255,255,255,0.04)",
+                    borderRadius: "12px", padding: "12px 10px"
                   }}>
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: mac.color }}>{mac.val}</span>
-                    <div style={{ fontSize: "9px", color: "#475569", textTransform: "uppercase", letterSpacing: ".05em", marginTop: "1px" }}>{mac.label}</div>
-                    <div style={{ height: "2px", background: "rgba(255,255,255,0.03)", borderRadius: "1px", marginTop: "4px", overflow: "hidden" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 700, color: mac.color }}>{mac.val}</span>
+                    <div style={{ fontSize: "9px", color: "#475569", textTransform: "uppercase", letterSpacing: ".05em", marginTop: "2px" }}>{mac.label}</div>
+                    <div style={{ height: "3px", background: "rgba(255,255,255,0.03)", borderRadius: "1px", marginTop: "4px", overflow: "hidden" }}>
                       <div
                         className={`bar-fill ${loaded ? 'loaded' : ''}`}
                         style={{ "--bar-width": `${mac.pct}%`, background: mac.color } as React.CSSProperties}
@@ -183,22 +227,49 @@ export default function Home() {
       </section>
 
       {/* ── 2. How It Works ── */}
-      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)" }}>
-        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "80px 24px" }}>
+      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)", position: "relative", overflow: "hidden" }}>
+        
+        {/* Subtle background radial glow */}
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "700px",
+          height: "450px",
+          background: "radial-gradient(circle, rgba(16,185,129,0.03) 0%, rgba(56,189,248,0.01) 50%, transparent 70%)",
+          filter: "blur(60px)",
+          pointerEvents: "none",
+          zIndex: 0
+        }} />
+
+        <div style={{ width: "100%", maxWidth: "980px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
           
-          <div style={{ textAlign: "center", marginBottom: "48px" }}>
-            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>How It Works</h2>
-            <p style={{ fontSize: "14px", color: "#64748b", marginTop: "6px" }}>A clean, three-step automated tracking loop</p>
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: "8px" }}>How It Works</span>
+            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>From plate to macros in three steps</h2>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px" }} className="md:grid-cols-3">
+          <div style={{ gap: "24px", position: "relative" }} className="grid grid-cols-1 md:grid-cols-3">
+            
+            {/* Connecting line */}
+            <div style={{
+              position: "absolute",
+              top: "50px",
+              left: "15%",
+              right: "15%",
+              height: "2px",
+              background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.15) 20%, rgba(52,211,153,0.15) 80%, transparent)",
+              zIndex: 0
+            }} className="hidden md:block" />
+
             {[
               {
                 step: "01",
                 title: "Snap a photo",
                 desc: "Take or upload a picture of a meal from any device.",
                 icon: (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
@@ -209,7 +280,7 @@ export default function Home() {
                 title: "Gemini Vision analyzes it",
                 desc: "Identifies the food and estimates calories, protein, carbs, and fat.",
                 icon: (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" />
                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                     <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -221,7 +292,7 @@ export default function Home() {
                 title: "Track it over time",
                 desc: "Every analyzed meal is automatically logged to your dashboard database.",
                 icon: (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                     <line x1="16" y1="2" x2="16" y2="6" />
                     <line x1="8" y1="2" x2="8" y2="6" />
@@ -231,14 +302,16 @@ export default function Home() {
               }
             ].map((st, i) => (
               <div key={st.step} className="card-hover" style={{
-                background: "rgba(15,23,42,0.55)", border: "1px solid rgba(255,255,255,0.04)",
-                borderRadius: "16px", padding: "28px 24px"
+                background: "rgba(20,32,58,0.6)", border: "1px solid rgba(16,185,129,0.1)",
+                borderRadius: "16px", padding: "28px 24px", backdropFilter: "blur(8px)",
+                position: "relative", zIndex: 1
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
                   <div style={{
-                    width: "36px", height: "36px", borderRadius: "10px",
+                    width: "52px", height: "52px", borderRadius: "14px",
                     background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)",
-                    display: "flex", alignItems: "center", justifyContent: "center"
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    position: "relative", zIndex: 2
                   }}>
                     {st.icon}
                   </div>
@@ -254,80 +327,83 @@ export default function Home() {
       </section>
 
       {/* ── 3. Features ── */}
-      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)" }}>
-        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "80px 24px" }}>
+      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)", position: "relative", overflow: "hidden" }}>
+        
+        {/* Subtle background radial glow */}
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "800px",
+          height: "450px",
+          background: "radial-gradient(circle, rgba(56,189,248,0.02) 0%, rgba(16,185,129,0.005) 50%, transparent 70%)",
+          filter: "blur(70px)",
+          pointerEvents: "none",
+          zIndex: 0
+        }} />
+
+        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
           
-          <div style={{ textAlign: "center", marginBottom: "48px" }}>
-            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>Key Features</h2>
-            <p style={{ fontSize: "14px", color: "#64748b", marginTop: "6px" }}>Tailored tools for seamless daily nutrition tracking</p>
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: "8px" }}>Why Veonix</span>
+            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>Built to be quick, accurate, and yours</h2>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "20px" }} className="sm:grid-cols-2 lg:grid-cols-4">
+          <div style={{ gap: "24px" }} className="grid grid-cols-1 md:grid-cols-3">
             {[
               {
-                title: "Fast",
-                sub: "Real-time AI processing",
+                title: "Fast Analysis",
+                sub: "Analyze meals in less than 2 seconds.",
                 color: "#34d399",
                 bg: "rgba(52,211,153,0.08)",
                 icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                   </svg>
                 )
               },
               {
-                title: "Smart",
-                sub: "Powered by Gemini Vision",
-                color: "#10b981",
-                bg: "rgba(16,185,129,0.12)",
-                icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 2v20M2 12h20" />
-                  </svg>
-                )
-              },
-              {
-                title: "History",
-                sub: "Saved and aggregated",
+                title: "AI Powered",
+                sub: "Powered by Gemini Vision.",
                 color: "#38bdf8",
                 bg: "rgba(56,189,248,0.08)",
                 icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 8v4l3 3" />
-                    <circle cx="12" cy="12" r="10" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                    <path d="M9 9h6v6H9zM9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3" />
                   </svg>
                 )
               },
               {
-                title: "Private",
-                sub: "Secure database protection",
-                color: "#f472b6",
-                bg: "rgba(244,114,182,0.08)",
+                title: "Privacy First",
+                sub: "Images are processed securely.",
+                color: "#34d399",
+                bg: "rgba(52,211,153,0.08)",
                 icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                 )
               }
             ].map((ft) => (
               <div key={ft.title} className="card-hover" style={{
-                background: "rgba(15,23,42,0.55)", border: "1px solid rgba(255,255,255,0.04)",
-                borderRadius: "16px", padding: "24px 18px", display: "flex", flexDirection: "column",
-                alignItems: "center", gap: "8px", position: "relative", overflow: "hidden"
+                background: "rgba(20,32,58,0.6)", border: "1px solid rgba(16,185,129,0.1)",
+                borderRadius: "16px", padding: "32px 24px", display: "flex", flexDirection: "column",
+                alignItems: "center", gap: "12px", position: "relative", overflow: "hidden", backdropFilter: "blur(8px)"
               }}>
                 <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: "1px", background: `linear-gradient(90deg, transparent, ${ft.color}, transparent)` }} />
                 <div style={{
-                  width: "36px", height: "36px", borderRadius: "10px",
+                  width: "52px", height: "52px", borderRadius: "14px",
                   background: ft.bg, border: `1px solid ${ft.color}25`,
-                  display: "flex", alignItems: "center", justifyContent: "center"
+                  display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "4px"
                 }}>
                   {ft.icon}
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: ft.color, letterSpacing: ".08em", textTransform: "uppercase" }}>{ft.title}</div>
-                  <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>{ft.sub}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: ft.color, letterSpacing: ".02em" }}>{ft.title}</div>
+                  <div style={{ fontSize: "13px", color: "#64748b", marginTop: "6px", lineHeight: 1.5 }}>{ft.sub}</div>
                 </div>
               </div>
             ))}
@@ -336,23 +412,41 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 4. Built With ── */}
-      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)" }}>
-        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "40px 24px" }}>
-          
-          <div style={{ textAlign: "center", marginBottom: "16px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.15em" }}>Built with</span>
+      {/* ── 9. Statistics Section ── */}
+      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)", position: "relative", overflow: "hidden" }}>
+        
+        {/* Subtle background radial glow */}
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "700px",
+          height: "400px",
+          background: "radial-gradient(circle, rgba(16,185,129,0.02) 0%, rgba(56,189,248,0.005) 50%, transparent 70%)",
+          filter: "blur(60px)",
+          pointerEvents: "none",
+          zIndex: 0
+        }} />
+
+        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "60px 24px", position: "relative", zIndex: 1 }}>
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: "8px" }}>Veonix by the numbers</span>
+            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>Proven performance, complete security</h2>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
-            {["FastAPI", "Next.js 15", "TypeScript", "Gemini Vision", "Docker", "Tailwind CSS"].map((tech) => (
-              <span key={tech} style={{
-                padding: "6px 16px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: "99px", color: "#64748b", fontSize: "12px", fontWeight: 500
-              }}>{tech}</span>
+          <div style={{ gap: "24px" }} className="grid grid-cols-2 lg:grid-cols-4">
+            {STATS.map((stat, i) => (
+              <div key={stat.label} className="card-hover" style={{
+                background: "rgba(20,32,58,0.6)", border: "1px solid rgba(255,255,255,0.04)",
+                borderRadius: "16px", padding: "32px 20px", display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", gap: "8px", backdropFilter: "blur(8px)"
+              }}>
+                <span style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 800, color: stat.color, letterSpacing: "-1px" }}>{stat.value}</span>
+                <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>{stat.label}</span>
+              </div>
             ))}
           </div>
-
         </div>
       </section>
 
@@ -369,15 +463,15 @@ export default function Home() {
             {/* Soft internal gradient background glow */}
             <div style={{ position: "absolute", top: "-50px", left: "-50px", width: "100px", height: "100px", background: "rgba(16,185,129,0.06)", borderRadius: "50%", filter: "blur(40px)" }} />
             
-            <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#f1f5f9", marginBottom: "8px" }}>Ready to see what is on your plate?</h2>
+            <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#f1f5f9", marginBottom: "8px" }}>Start tracking your nutrition with AI.</h2>
             <p style={{ fontSize: "14px", color: "#64748b", maxWidth: "440px", margin: "0 auto 28px", lineHeight: 1.5 }}>
-              Snap your meal to receive instantly calculated macro ratios and logs.
+              Upload your first meal in seconds.
             </p>
             <Link href="/dashboard/upload" className="btn-glow" style={{
               display: "inline-block", padding: "14px 36px", background: "#10b981", border: "none", borderRadius: "99px",
               color: "#020617", fontSize: "14px", fontWeight: 700, textDecoration: "none", transition: "all .15s",
               boxShadow: "0 4px 20px rgba(16, 185, 129, 0.2)"
-            }}>Get Started</Link>
+            }}>Analyze My Meal →</Link>
           </div>
 
         </div>
@@ -386,27 +480,65 @@ export default function Home() {
       {/* ── 6. Footer ── */}
       <footer style={{
         borderTop: "1px solid rgba(255,255,255,0.04)",
-        padding: "16px clamp(20px, 4vw, 48px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        width: "100%",
-        marginTop: "40px",
-        background: "rgba(2,6,23,0.4)",
+        padding: "48px clamp(24px, 5vw, 64px) 32px",
+        background: "rgba(2,6,23,0.7)",
+        backdropFilter: "blur(12px)",
         position: "relative",
         zIndex: 1,
+        marginTop: "80px"
       }}>
-        {/* Left — empty spacer */}
-        <div style={{ width: "80px" }} />
+        <div style={{
+          maxWidth: "1100px",
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "1fr",
+          gap: "32px"
+        }} className="md:grid-cols-3 items-start">
+          
+          {/* Column 1: Brand */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
+                <path d="M20 75L50 20L80 75" stroke="#10b981" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="50" cy="55" r="7" fill="#10b981" />
+              </svg>
+              <span style={{ fontSize: "18px", fontWeight: 800, color: "#fff", letterSpacing: "-0.5px" }}>Veonix</span>
+            </div>
+            <p style={{ fontSize: "13px", color: "#64748b", lineHeight: 1.5, maxWidth: "240px" }}>
+              AI-powered nutrition analysis and tracking.
+            </p>
+          </div>
 
-        {/* Center — © + logo + name */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <svg width="13" height="13" viewBox="0 0 100 100" fill="none">
-            <path d="M20 75L50 20L80 75" stroke="#10b981" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="50" cy="55" r="7" fill="#10b981" />
-          </svg>
-          <span style={{ fontSize: "11px", color: "#334155" }}>
-            Built by{" "}
+          {/* Column 2: Product */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em" }}>Product</span>
+            <Link href="/dashboard/upload" style={{ fontSize: "13px", color: "#94a3b8", textDecoration: "none" }} className="hover:text-emerald-400 transition-colors">Upload</Link>
+            <Link href="/dashboard/history" style={{ fontSize: "13px", color: "#94a3b8", textDecoration: "none" }} className="hover:text-emerald-400 transition-colors">History</Link>
+          </div>
+
+          {/* Column 3: Connect */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em" }}>Connect</span>
+            <a href="https://github.com/mariiammaysara/Veonix" target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: "#94a3b8", textDecoration: "none" }} className="hover:text-emerald-400 transition-colors">GitHub</a>
+            <a href="https://www.linkedin.com/in/mariam-maysara/" target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: "#94a3b8", textDecoration: "none" }} className="hover:text-emerald-400 transition-colors">LinkedIn</a>
+          </div>
+
+        </div>
+
+        {/* Thin top border & copyright */}
+        <div style={{
+          maxWidth: "1100px",
+          margin: "32px auto 0",
+          paddingTop: "24px",
+          borderTop: "1px solid rgba(255, 255, 255, 0.04)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px"
+        }}>
+          <span style={{ fontSize: "13px", color: "#64748b" }}>
+            &copy; 2026 Veonix. Built by{" "}
             <a
               href="https://www.linkedin.com/in/mariam-maysara/"
               target="_blank"
@@ -416,30 +548,9 @@ export default function Home() {
             >
               Mariam Maysara
             </a>
+            .
           </span>
         </div>
-
-        {/* Right — GitHub */}
-        <a
-          href="https://github.com/mariiammaysara/Veonix"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "flex", alignItems: "center", gap: "5px",
-            padding: "4px 10px",
-            background: "rgba(15,23,42,0.55)",
-            border: "1px solid rgba(255,255,255,0.06)",
-            borderRadius: "8px",
-            color: "#475569", fontSize: "11px",
-            fontWeight: 500, textDecoration: "none",
-            width: "80px", justifyContent: "center",
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-          </svg>
-          Source
-        </a>
       </footer>
 
     </div>

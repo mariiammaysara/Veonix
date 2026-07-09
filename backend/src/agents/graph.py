@@ -19,6 +19,8 @@ from src.providers.vision.base import VisionResult
 from src.providers.vision.factory import get_vision_provider
 from src.helpers.image_processor import compress_image
 from src.helpers.prompts import build_vision_prompt, build_coach_prompt
+from langfuse import observe, propagate_attributes
+from langfuse.langchain import CallbackHandler
 
 logger = logging.getLogger(__name__)
 
@@ -271,12 +273,15 @@ knowledge_workflow.add_edge("knowledge_node", END)
 knowledge_graph = knowledge_workflow.compile()
 
 
+@observe(name="veonix-analysis-workflow")
 async def run_analysis_graph(
     image_bytes: Optional[bytes] = None,
     question: Optional[str] = None,
     thread_id: Optional[str] = None,
     config: Optional[dict] = None,
     request_id: Optional[str] = None,
+    vision_result: Optional[VisionResult] = None,
+    allergies_warning: Optional[str] = None,
 ) -> AnalysisState:
     """
     Runs the main supervisor orchestrator graph.
@@ -285,32 +290,44 @@ async def run_analysis_graph(
     Injects AgentTraceCallback as a LangGraph callback so every node start/end
     and tool start/end is emitted as a structured JSON log line, mirroring the
     HTTP-level RequestLoggerMiddleware/TimingMiddleware pattern at agent scope.
+
+    Performance path: if vision_result is already computed (from the streaming
+    endpoint), it is injected directly into the state so the supervisor skips
+    vision_node and routes straight to persist_node, avoiding the redundant
+    second Gemini call.
     """
     # Lazy import prevents compile-time circular dependencies
     from src.agents.supervisor import main_graph
     from src.middleware.agent_trace import AgentTraceCallback
-    
+
     initial_state = {
         "image_bytes": image_bytes,
-        "vision_result": None,
+        "vision_result": vision_result,
         "question": question,
         "history_answer": None,
         "error": None,
         "retry_count": 0,
         "retake_prompt": None,
-        "allergies_warning": None
+        "allergies_warning": allergies_warning,
     }
-    
+
     if not config:
         if thread_id:
             config = {"configurable": {"thread_id": thread_id}}
         else:
             config = {"configurable": {"thread_id": "default-test-thread"}}
-    
+
+    # Instantiate request-scoped Langfuse CallbackHandler with context propagation
+    with propagate_attributes(
+        session_id=thread_id or "default-thread",
+        tags=["vision" if image_bytes else "coach"]
+    ):
+        langfuse_handler = CallbackHandler()
+
     # Inject agent-level trace callback — one instance per invocation
     trace_cb = AgentTraceCallback(request_id=request_id)
-    config = {**config, "callbacks": [trace_cb]}
-        
+    config = {**config, "callbacks": [trace_cb, langfuse_handler]}
+
     result_state = await main_graph.ainvoke(initial_state, config=config)
     return result_state
 
