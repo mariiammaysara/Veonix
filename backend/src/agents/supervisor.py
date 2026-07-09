@@ -32,51 +32,50 @@ async def route_request(image_bytes: Optional[bytes], question: Optional[str]) -
     - If question is present: uses rule-based keywords and Gemini classification
       to route to history_node (personal SQL data) or knowledge_node (general RAG/Tavily search).
     """
-    if image_bytes is not None:
+    if image_bytes:
         logger.info("Image bytes present. Supervisor routing to vision_node.")
         return "vision_node"
+    elif question:
+        question_lower = question.lower()
         
-    if not question:
+        # Fast check: queries explicitly requesting search engines or general news
+        if any(kw in question_lower for kw in ["search", "latest", "tavily", "web", "current"]):
+            logger.info(f"Keyword search match found in '{question}'. Supervisor routing to knowledge_node.")
+            return "knowledge_node"
+            
+        # Classify with LLM for ambiguity resolution
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        
+        CLASSIFY_PROMPT = f"""
+        You are an AI supervisor routing queries to the correct expert.
+        Analyze the user question and classify it:
+        - "history_node": For questions about the user's personal logged meal history, personal calorie/protein consumption history, or personal food logs. (e.g., "what did I eat today?", "how many calories this week?")
+        - "knowledge_node": For general nutrition questions, recipes, food ingredient details, or general information. (e.g., "how much protein in an egg?", "benefits of avocado")
+        
+        User Question: "{question}"
+        
+        Respond ONLY with "history_node" or "knowledge_node". No other text.
+        """
+        
+        try:
+            classify_resp = await client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[CLASSIFY_PROMPT],
+                config=types.GenerateContentConfig(temperature=0.0)
+            )
+            category = classify_resp.text.strip().lower()
+            logger.info(f"Supervisor LLM classified query '{question}' as: {category}")
+            
+            if "history_node" in category:
+                return "history_node"
+            else:
+                return "knowledge_node"
+        except Exception as e:
+            logger.error(f"Supervisor classification failed, defaulting to knowledge_node: {e}")
+            return "knowledge_node"
+    else:
         logger.info("Empty request input. Supervisor routing to END.")
         return "END"
-        
-    question_lower = question.lower()
-    
-    # Fast check: queries explicitly requesting search engines or general news
-    if any(kw in question_lower for kw in ["search", "latest", "tavily", "web", "current"]):
-        logger.info(f"Keyword search match found in '{question}'. Supervisor routing to knowledge_node.")
-        return "knowledge_node"
-        
-    # Classify with LLM for ambiguity resolution
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    
-    CLASSIFY_PROMPT = f"""
-    You are an AI supervisor routing queries to the correct expert.
-    Analyze the user question and classify it:
-    - "history_node": For questions about the user's personal logged meal history, personal calorie/protein consumption history, or personal food logs. (e.g., "what did I eat today?", "how many calories this week?")
-    - "knowledge_node": For general nutrition questions, recipes, food ingredient details, or general information. (e.g., "how much protein in an egg?", "benefits of avocado")
-    
-    User Question: "{question}"
-    
-    Respond ONLY with "history_node" or "knowledge_node". No other text.
-    """
-    
-    try:
-        classify_resp = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[CLASSIFY_PROMPT],
-            config=types.GenerateContentConfig(temperature=0.0)
-        )
-        category = classify_resp.text.strip().lower()
-        logger.info(f"Supervisor LLM classified query '{question}' as: {category}")
-        
-        if "history_node" in category:
-            return "history_node"
-        else:
-            return "knowledge_node"
-    except Exception as e:
-        logger.error(f"Supervisor classification failed, defaulting to knowledge_node: {e}")
-        return "knowledge_node"
 
 
 # ── Subgraph Wrappers ────────────────────────────────────────────────────────

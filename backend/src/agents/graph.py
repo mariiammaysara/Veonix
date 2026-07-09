@@ -9,7 +9,8 @@ Author: Antigravity AI
 """
 
 import logging
-from typing import TypedDict, Optional, Any
+import contextvars
+from typing import TypedDict, Optional, Any, Union
 from langgraph.graph import StateGraph, START, END
 from google import genai
 from google.genai import types
@@ -24,12 +25,15 @@ from langfuse.langchain import CallbackHandler
 
 logger = logging.getLogger(__name__)
 
+# Context variable for passing raw image bytes across the execution flow without serializing in graph state
+image_bytes_ctx = contextvars.ContextVar("image_bytes_ctx", default=None)
+
 
 class AnalysisState(TypedDict):
     """
     State schema for the supervisor orchestration and subgraphs.
     """
-    image_bytes: Optional[bytes]
+    image_bytes: Optional[Union[bytes, dict]]
     vision_result: Optional[VisionResult]
     question: Optional[str]
     history_answer: Optional[str]
@@ -48,11 +52,19 @@ async def vision_node(state: AnalysisState) -> dict:
     """
     logger.info(f"vision_node using model={settings.GEMINI_MODEL}")
     try:
-        if not state.get("image_bytes"):
-            raise ValueError("No image bytes provided for vision_node.")
+        raw_bytes = image_bytes_ctx.get()
+        if not raw_bytes:
+            state_bytes = state.get("image_bytes")
+            if isinstance(state_bytes, bytes):
+                raw_bytes = state_bytes
+            else:
+                raise ValueError("No image bytes provided in context or state for vision_node.")
             
+        original_size = len(raw_bytes)
         # Preprocess/compress the image to optimize payload size
-        compressed = compress_image(state["image_bytes"])
+        compressed = compress_image(raw_bytes)
+        compressed_size = len(compressed)
+        ratio = round(compressed_size / original_size, 2) if original_size else None
         
         # Load profile for goal-aware prompt building and allergy checks
         from src.agents.store import NutritionCoachingStore
@@ -60,7 +72,7 @@ async def vision_node(state: AnalysisState) -> dict:
         profile = store.get_profile()
         dietary_goal = profile.get("dietary_goal")
         
-        # Build a goal-aware prompt — falls back to base GEMINI_PROMPT if no goal set
+        # Build a goal-aware prompt - falls back to base GEMINI_PROMPT if no goal set
         prompt = build_vision_prompt(dietary_goal)
         if dietary_goal:
             logger.info(f"vision_node using goal-framed prompt for dietary_goal='{dietary_goal}'")
@@ -68,33 +80,42 @@ async def vision_node(state: AnalysisState) -> dict:
         provider = get_vision_provider()
         result = await provider.analyze(compressed, prompt=prompt)
         
-        logger.info(f"Gemini: {result.food_name} ({result.confidence:.0%}) — {result.calories} kcal")
-        
-        # Verify user allergies against ingredients
-        allergies = [a.strip().lower() for a in profile.get("allergies", []) if a.strip()]
-        food_lower = result.food_name.lower()
-        ingredients = [i.lower() for i in (result.ingredients or [])]
-        
-        matched_allergies = []
-        for allergy in allergies:
-            if allergy in food_lower:
-                matched_allergies.append(allergy)
-            else:
-                for ing in ingredients:
-                    if allergy in ing:
-                        matched_allergies.append(allergy)
-                        break
-                        
-        warning = None
-        if matched_allergies:
-            warning = f"Warning: This meal may contain ingredients you are allergic to: {', '.join(matched_allergies)}."
-            logger.warning(f"Allergy warning triggered: {warning}")
-        
-        return {
-            "vision_result": result,
-            "allergies_warning": warning,
-            "error": None
-        }
+        with propagate_attributes(
+            metadata={
+                "model": settings.GEMINI_MODEL,
+                "confidence": str(result.confidence) if result else None,
+                "image_size_bytes": str(original_size),
+                "compressed_size_bytes": str(compressed_size),
+                "compression_ratio": str(ratio) if ratio is not None else None,
+            }
+        ):
+            logger.info(f"Gemini: {result.food_name} ({result.confidence:.0%}) - {result.calories} kcal")
+            
+            # Verify user allergies against ingredients
+            allergies = [a.strip().lower() for a in profile.get("allergies", []) if a.strip()]
+            food_lower = result.food_name.lower()
+            ingredients = [i.lower() for i in (result.ingredients or [])]
+            
+            matched_allergies = []
+            for allergy in allergies:
+                if allergy in food_lower:
+                    matched_allergies.append(allergy)
+                else:
+                    for ing in ingredients:
+                        if allergy in ing:
+                            matched_allergies.append(allergy)
+                            break
+                            
+            warning = None
+            if matched_allergies:
+                warning = f"Warning: This meal may contain ingredients you are allergic to: {', '.join(matched_allergies)}."
+                logger.warning(f"Allergy warning triggered: {warning}")
+            
+            return {
+                "vision_result": result,
+                "allergies_warning": warning,
+                "error": None
+            }
     except Exception as e:
         logger.error(f"Error in vision_node: {str(e)}")
         return {
@@ -300,8 +321,16 @@ async def run_analysis_graph(
     from src.agents.supervisor import main_graph
     from src.middleware.agent_trace import AgentTraceCallback
 
+    image_summary = None
+    if image_bytes:
+        image_summary = {
+            "image_present": True,
+            "image_size_bytes": len(image_bytes),
+            "mime_type": "image/jpeg"
+        }
+
     initial_state = {
-        "image_bytes": image_bytes,
+        "image_bytes": image_summary,
         "vision_result": vision_result,
         "question": question,
         "history_answer": None,
@@ -317,18 +346,39 @@ async def run_analysis_graph(
         else:
             config = {"configurable": {"thread_id": "default-test-thread"}}
 
-    # Instantiate request-scoped Langfuse CallbackHandler with context propagation
-    with propagate_attributes(
-        session_id=thread_id or "default-thread",
-        tags=["vision" if image_bytes else "coach"]
-    ):
-        langfuse_handler = CallbackHandler()
+    # Dynamic trace attributes
+    is_vision = bool(image_bytes or vision_result)
+    trace_name = "vision-analysis" if is_vision else "coach-question"
+    tags = ["vision", "meal", "gemini"] if is_vision else ["coach", "rag", "nutrition"]
+    
+    metadata = {
+        "model": settings.GEMINI_MODEL,
+    }
+    if vision_result:
+        metadata["confidence"] = str(vision_result.confidence)
 
-    # Inject agent-level trace callback — one instance per invocation
-    trace_cb = AgentTraceCallback(request_id=request_id)
-    config = {**config, "callbacks": [trace_cb, langfuse_handler]}
+    token = None
+    if image_bytes:
+        token = image_bytes_ctx.set(image_bytes)
 
-    result_state = await main_graph.ainvoke(initial_state, config=config)
-    return result_state
+    try:
+        # Wrap execution to propagate attributes to the Langfuse CallbackHandler and traces
+        with propagate_attributes(
+            trace_name=trace_name,
+            session_id=thread_id or "default-thread",
+            tags=tags,
+            metadata=metadata
+        ):
+            langfuse_handler = CallbackHandler()
+            
+            # Inject agent-level trace callback - one instance per invocation
+            trace_cb = AgentTraceCallback(request_id=request_id)
+            config = {**config, "callbacks": [trace_cb, langfuse_handler]}
+
+            result_state = await main_graph.ainvoke(initial_state, config=config)
+            return result_state
+    finally:
+        if token is not None:
+            image_bytes_ctx.reset(token)
 
 

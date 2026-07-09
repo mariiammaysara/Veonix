@@ -103,13 +103,18 @@ async def _analyze_single_image(image_bytes: bytes, index: int) -> dict:
     Returns:
         Raw vision subgraph state dict.
     """
-    from src.agents.graph import vision_graph, AnalysisState
+    from src.agents.graph import vision_graph, AnalysisState, image_bytes_ctx
     from src.helpers.image_processor import compress_image
 
     thread_id = f"batch-{uuid.uuid4()}"
+    compressed = compress_image(image_bytes)
 
     initial_state: AnalysisState = {
-        "image_bytes": compress_image(image_bytes),
+        "image_bytes": {
+            "image_present": True,
+            "image_size_bytes": len(image_bytes),
+            "mime_type": "image/jpeg"
+        },
         "vision_result": None,
         "question": None,
         "history_answer": None,
@@ -121,14 +126,17 @@ async def _analyze_single_image(image_bytes: bytes, index: int) -> dict:
 
     logger.info(f"Batch: starting vision_graph for image[{index}] thread={thread_id}")
 
+    token = image_bytes_ctx.set(compressed)
     try:
-        # vision_graph is a compiled subgraph — invoke directly (no checkpointer needed)
+        # vision_graph is a compiled subgraph - invoke directly (no checkpointer needed)
         result_state = await vision_graph.ainvoke(initial_state)
         logger.info(f"Batch: completed image[{index}]")
         return result_state
     except Exception as e:
         logger.error(f"Batch: error on image[{index}]: {e}")
         return {"vision_result": None, "error": str(e), "allergies_warning": None}
+    finally:
+        image_bytes_ctx.reset(token)
 
 
 async def analyze_images_parallel(

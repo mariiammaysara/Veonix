@@ -127,16 +127,22 @@ async def confirm_recommendation(thread_id: str, payload: ConfirmRequest):
                     await main_graph.aupdate_state(config, {"vision_result": updated_result}, as_node="vision_node")
 
         # Resume graph execution
+        from src.config import settings
+        
         with propagate_attributes(
+            trace_name="hitl-confirm",
             session_id=thread_id,
-            tags=["confirm"]
+            tags=["hitl", "confirm"],
+            metadata={
+                "model": settings.GEMINI_MODEL,
+            }
         ):
             langfuse_handler = CallbackHandler()
-        config["callbacks"] = config.get("callbacks", []) + [langfuse_handler]
+            config["callbacks"] = config.get("callbacks", []) + [langfuse_handler]
 
-        resumed_state = await main_graph.ainvoke(None, config=config)
-        if resumed_state.get("error"):
-            raise resumed_state["error"]
+            resumed_state = await main_graph.ainvoke(None, config=config)
+            if resumed_state.get("error"):
+                raise resumed_state["error"]
 
         return {"status": "success", "data": {"message": "Meal persisted successfully."}}
 

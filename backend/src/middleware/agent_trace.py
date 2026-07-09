@@ -73,7 +73,7 @@ class AgentTraceCallback(AsyncCallbackHandler):
         node_name = (
             (metadata or {}).get("langgraph_node")
             or (tags[0] if tags else None)
-            or serialized.get("name", "unknown_node")
+            or (serialized.get("name", "unknown_node") if serialized else "unknown_node")
         )
 
         self._emit({

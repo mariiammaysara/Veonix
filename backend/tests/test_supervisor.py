@@ -98,3 +98,49 @@ async def test_supervisor_retry_loop_limit():
             assert final_state["retry_count"] == 2
             assert final_state["retake_prompt"] is not None
             assert "retake the photo" in final_state["retake_prompt"].lower()
+
+
+@pytest.mark.asyncio
+async def test_supervisor_text_only_routing():
+    """
+    Verifies that a text-only request with no image bytes correctly routes
+    to history_node/knowledge_node and returns a valid history_answer.
+    """
+    initial_state = {
+        "image_bytes": None,
+        "vision_result": None,
+        "question": "What is the protein content of salmon?",
+        "history_answer": None,
+        "error": None,
+        "retry_count": 0,
+        "retake_prompt": None,
+        "allergies_warning": None,
+    }
+
+    # Mock the Gemini classification to return "knowledge_node"
+    # Mock the search knowledge RAG tool and formatting LLM call
+    with patch("google.genai.Client") as mock_client_class:
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        
+        # Mock classication response
+        mock_classify_resp = MagicMock()
+        mock_classify_resp.text = "knowledge_node"
+        
+        # Mock formatting response
+        mock_format_resp = MagicMock()
+        mock_format_resp.text = "Salmon contains about 20g of protein per 100g."
+        
+        # Set up side effects for generate_content (1st call: classification, 2nd call: formatting)
+        mock_client.aio.models.generate_content = AsyncMock(
+            side_effect=[mock_classify_resp, mock_format_resp]
+        )
+
+        with patch("src.agents.tools.rag_tool.search_nutrition_knowledge", AsyncMock(return_value="Salmon nutrition data.")):
+            final_state = await main_graph.ainvoke(
+                initial_state,
+                config={"configurable": {"thread_id": "test-text-thread"}}
+            )
+            
+            assert final_state["error"] is None
+            assert final_state["history_answer"] == "Salmon contains about 20g of protein per 100g."
