@@ -63,4 +63,4 @@ async def search_tavily(query: str) -> str:
 
         except Exception as e:
             logger.error(f"Tavily search execution failed: {e}")
-            return f"Failed to retrieve web search details: {e}"
+            raise e

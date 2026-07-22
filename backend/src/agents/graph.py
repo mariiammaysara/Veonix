@@ -17,11 +17,12 @@ from google.genai import types
 
 from src.config import settings
 from src.providers.vision.base import VisionResult
-from src.providers.vision.factory import get_vision_provider
+from src.providers.vision.factory import get_vision_provider, get_gemini_client
 from src.helpers.image_processor import compress_image
 from src.helpers.prompts import build_vision_prompt, build_coach_prompt
 from langfuse import observe, propagate_attributes
 from langfuse.langchain import CallbackHandler
+from src.enums.graph_errors import build_graph_error
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,9 @@ async def vision_node(state: AnalysisState) -> dict:
         
         # Load profile for goal-aware prompt building and allergy checks
         from src.agents.store import NutritionCoachingStore
+        import asyncio
         store = NutritionCoachingStore()
-        profile = store.get_profile()
+        profile = await asyncio.to_thread(store.get_profile)
         dietary_goal = profile.get("dietary_goal")
         
         # Build a goal-aware prompt - falls back to base GEMINI_PROMPT if no goal set
@@ -121,7 +123,7 @@ async def vision_node(state: AnalysisState) -> dict:
         return {
             "vision_result": None,
             "allergies_warning": None,
-            "error": e
+            "error": build_graph_error(e, provider="gemini")
         }
 
 
@@ -200,9 +202,14 @@ async def history_node(state: AnalysisState) -> dict:
         }
     except Exception as e:
         logger.error(f"Error in history_node: {str(e)}")
+        # Classify provider dynamically: if it's API related, attribute it to gemini
+        provider = "sqlite"
+        err_str = str(e).lower()
+        if "gemini" in err_str or "google" in err_str:
+            provider = "gemini"
         return {
             "history_answer": None,
-            "error": e
+            "error": build_graph_error(e, provider=provider)
         }
 
 
@@ -228,13 +235,14 @@ async def knowledge_node(state: AnalysisState) -> dict:
         if not question:
             raise ValueError("No question provided for knowledge_node.")
             
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        client = get_gemini_client()
         
         # Load user profile and meal history memory from store
         from src.agents.store import NutritionCoachingStore
+        import asyncio
         store = NutritionCoachingStore()
-        profile = store.get_profile()
-        recent_meals = store.get_meal_documents(limit=5)
+        profile = await asyncio.to_thread(store.get_profile)
+        recent_meals = await asyncio.to_thread(store.get_meal_documents, limit=5)
         dietary_goal = profile.get("dietary_goal")
         
         profile_context = f"Dietary Goal: {dietary_goal or 'None'}\nAllergies: {', '.join(profile.get('allergies') or []) or 'None'}"
@@ -280,9 +288,13 @@ async def knowledge_node(state: AnalysisState) -> dict:
         }
     except Exception as e:
         logger.error(f"Error in knowledge_node: {str(e)}")
+        provider = "tavily"
+        err_str = str(e).lower()
+        if "gemini" in err_str or "google" in err_str or "embed" in err_str or "rag" in err_str:
+            provider = "gemini"
         return {
             "history_answer": None,
-            "error": e
+            "error": build_graph_error(e, provider=provider)
         }
 
 

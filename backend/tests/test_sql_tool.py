@@ -104,9 +104,9 @@ async def test_query_meal_history_allow_list_validation():
     Ensure the tool rejects disallowed column names, query types, or time ranges.
     """
     # Mocking Gemini Client class inside sql_tool
-    with patch("src.agents.tools.sql_tool.genai.Client") as mock_client_class:
+    with patch("src.agents.tools.sql_tool.get_gemini_client") as mock_get_client:
         mock_client = MagicMock()
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_aio = MagicMock()
         mock_client.aio = mock_aio
         
@@ -132,9 +132,9 @@ async def test_query_meal_history_aggregates():
     """
     Verify that aggregates (sum, average, count) calculate correctly.
     """
-    with patch("src.agents.tools.sql_tool.genai.Client") as mock_client_class:
+    with patch("src.agents.tools.sql_tool.get_gemini_client") as mock_get_client:
         mock_client = MagicMock()
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_aio = MagicMock()
         mock_client.aio = mock_aio
         

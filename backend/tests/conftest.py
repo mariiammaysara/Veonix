@@ -18,3 +18,14 @@ def setup_test_database():
     
     Base.metadata.create_all(bind=engine)
     yield
+
+
+@pytest.fixture(autouse=True)
+def reset_singletons():
+    """
+    Clears cached client and provider singletons between tests to prevent leakage.
+    """
+    import src.providers.vision.factory as factory
+    factory._client = None
+    factory._provider = None
+    yield

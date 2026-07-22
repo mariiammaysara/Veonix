@@ -174,8 +174,8 @@ async def analyze_images_parallel(
         f"meals analyzed. Total calories: {aggregate['total_calories']} kcal"
     )
 
-    # Persist all successfully analyzed meals to the database
-    _persist_batch_meals(meal_results, raw_states)
+    # Persist all successfully analyzed meals to the database in a background thread
+    await asyncio.to_thread(_persist_batch_meals, meal_results, raw_states)
 
     return {
         "meals": meal_results,
@@ -188,7 +188,7 @@ def _persist_batch_meals(
     raw_states: list[dict],
 ) -> None:
     """
-    Saves all batch meals to the database.
+    Saves all batch meals to the database in a single transaction.
     Batch bypasses HITL — meals are saved immediately without user confirmation.
     """
     from src.db.repository import MealRepository
@@ -197,40 +197,36 @@ def _persist_batch_meals(
     db = SessionLocal()
     try:
         repo = MealRepository(db)
-        saved_count = 0
+        meals_to_save = []
         for meal, state in zip(meal_results, raw_states):
             if meal is None:
                 continue
             result = state.get("vision_result")
             if result is None:
                 continue
-            try:
-                repo.save({
-                    "food_name": result.food_name,
-                    "cuisine": result.cuisine,
-                    "meal_type": result.meal_type,
-                    "preparation_method": result.preparation_method,
-                    "weight_grams": result.estimated_weight_grams,
-                    "confidence": result.confidence,
-                    "calories": result.calories,
-                    "protein": result.protein,
-                    "carbs": result.carbs,
-                    "fat": result.fat,
-                    "fiber": result.fiber,
-                    "sodium": result.sodium,
-                    "ingredients": result.ingredients,
-                    "per_100g": result.per_100g,
-                    "nutrition_source": "Gemini",
-                    "is_estimated": 0,
-                })
-                saved_count += 1
-            except Exception as e:
-                logger.error(f"Batch: failed to persist meal '{result.food_name}': {e}")
-
-        db.commit()
-        logger.info(f"Batch: persisted {saved_count} meals to database.")
+            meals_to_save.append({
+                "food_name": result.food_name,
+                "cuisine": result.cuisine,
+                "meal_type": result.meal_type,
+                "preparation_method": result.preparation_method,
+                "weight_grams": result.estimated_weight_grams,
+                "confidence": result.confidence,
+                "calories": result.calories,
+                "protein": result.protein,
+                "carbs": result.carbs,
+                "fat": result.fat,
+                "fiber": result.fiber,
+                "sodium": result.sodium,
+                "ingredients": result.ingredients,
+                "per_100g": result.per_100g,
+                "nutrition_source": "Gemini",
+                "is_estimated": 0,
+            })
+            
+        if meals_to_save:
+            repo.save_all(meals_to_save)
+            logger.info(f"Batch: persisted {len(meals_to_save)} meals to database in a single transaction.")
     except Exception as e:
-        logger.error(f"Batch: database commit failed: {e}")
-        db.rollback()
+        logger.error(f"Batch: database persistence failed: {e}")
     finally:
         db.close()

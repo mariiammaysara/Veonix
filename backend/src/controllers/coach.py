@@ -9,6 +9,7 @@ Author: Antigravity AI
 """
 
 import logging
+import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -45,11 +46,16 @@ async def ask_coach(payload: AskRequest):
 
     try:
         # Invoke the LangGraph workflow in history-querying mode
-        state = await run_analysis_graph(image_bytes=None, question=question)
+        thread_id = f"coach-{uuid.uuid4()}"
+        state = await run_analysis_graph(image_bytes=None, question=question, thread_id=thread_id)
         
         # Check for execution errors
         if state.get("error"):
-            raise state["error"]
+            err = state["error"]
+            # Graph nodes now store structured error dicts; unwrap before re-raising
+            if isinstance(err, dict):
+                raise RuntimeError(err.get("message", "Unknown graph error"))
+            raise err
 
         return {
             "status": "success",

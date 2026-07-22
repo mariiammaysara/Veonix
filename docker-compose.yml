@@ -12,6 +12,8 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-http://langfuse-web:3000}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-veonix-backend}
+
     volumes:
       - ./backend/veonix.db:/app/veonix.db
     networks:

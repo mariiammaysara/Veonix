@@ -18,6 +18,7 @@ from google import genai
 from google.genai import types
 
 from src.config import settings
+from src.providers.vision.factory import get_gemini_client
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,19 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
     return dot_product / (norm_a * norm_b)
 
 
+def _read_markdown_files(doc_paths: List[str]) -> List[str]:
+    all_chunks = []
+    for path in doc_paths:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+                chunks = chunk_text(content, chunk_size=500, overlap=50)
+                all_chunks.extend(chunks)
+        except Exception as e:
+            logger.error(f"Failed to read doc {path}: {e}")
+    return all_chunks
+
+
 async def initialize_vector_store():
     """
     Reads local nutrition markdown files, chunks them, generates embeddings,
@@ -83,7 +97,7 @@ async def initialize_vector_store():
     if _vector_store:
         return
         
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    client = get_gemini_client()
     
     # Try multiple search paths to handle running from root vs backend folder
     search_paths = [
@@ -103,15 +117,8 @@ async def initialize_vector_store():
         logger.warning("No nutrition reference docs found to index.")
         return
         
-    all_chunks = []
-    for path in doc_paths:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read()
-                chunks = chunk_text(content, chunk_size=500, overlap=50)
-                all_chunks.extend(chunks)
-        except Exception as e:
-            logger.error(f"Failed to read doc {path}: {e}")
+    import asyncio
+    all_chunks = await asyncio.to_thread(_read_markdown_files, doc_paths)
             
     if not all_chunks:
         logger.warning("No document chunks extracted for indexing.")
@@ -133,6 +140,7 @@ async def initialize_vector_store():
         logger.info(f"Indexed {len(_vector_store)} nutrition reference document chunks.")
     except Exception as e:
         logger.error(f"Failed to generate embeddings during indexing: {e}")
+        raise e
 
 
 async def search_nutrition_knowledge(query: str, threshold: float = 0.6) -> str:
@@ -144,7 +152,7 @@ async def search_nutrition_knowledge(query: str, threshold: float = 0.6) -> str:
     if not _vector_store:
         return ""
         
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    client = get_gemini_client()
     try:
         response = await client.aio.models.embed_content(
             model="text-embedding-004",
@@ -153,7 +161,7 @@ async def search_nutrition_knowledge(query: str, threshold: float = 0.6) -> str:
         query_embedding = response.embeddings[0].values
     except Exception as e:
         logger.error(f"Failed to generate query embedding: {e}")
-        return ""
+        raise e
         
     best_score = -1.0
     best_chunk = ""

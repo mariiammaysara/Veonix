@@ -90,7 +90,7 @@ async def analyze_image(
     try:
         import uuid
         from src.agents.supervisor import main_graph
-        thread_id = str(uuid.uuid4())
+        thread_id = f"meal-{uuid.uuid4()}"
         
         # Step 1: Run the LangGraph flow with thread_id
         from src.agents.graph import run_analysis_graph
@@ -98,7 +98,12 @@ async def analyze_image(
 
         # Step 2: Handle graph errors
         if state.get("error"):
-            raise state["error"]
+            err = state["error"]
+            # Graph nodes now store structured error dicts (error_type, provider, message);
+            # unwrap to a real exception so our existing exception handlers still work.
+            if isinstance(err, dict):
+                raise VisionProviderError(err.get("message", "Unknown graph error"))
+            raise err
 
         result = state["vision_result"]
 
@@ -196,7 +201,7 @@ async def _stream_image_analysis(image_bytes: bytes) -> None:
     from src.agents.supervisor import main_graph
     from src.services.meal_service import CONFIDENCE_THRESHOLD
 
-    thread_id = str(uuid.uuid4())
+    thread_id = f"meal-stream-{uuid.uuid4()}"
     t_request_start = time.perf_counter()
 
     try:

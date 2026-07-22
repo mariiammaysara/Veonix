@@ -22,6 +22,8 @@ from src.agents.graph import (
     knowledge_graph
 )
 
+from src.providers.vision.factory import get_gemini_client
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,7 +46,7 @@ async def route_request(image_bytes: Optional[bytes], question: Optional[str]) -
             return "knowledge_node"
             
         # Classify with LLM for ambiguity resolution
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        client = get_gemini_client()
         
         CLASSIFY_PROMPT = f"""
         You are an AI supervisor routing queries to the correct expert.
@@ -116,18 +118,7 @@ async def route_supervisor(state: AnalysisState) -> str:
     return await route_request(state.get("image_bytes"), state.get("question"))
 
 
-async def run_persist(state: AnalysisState) -> dict:
-    """
-    Persist the approved/analyzed meal to the database.
-    Called after user confirmation.
-    """
-    logger.info("Persist node invoked. Saving meal to database...")
-    result = state.get("vision_result")
-    if not result:
-        logger.warning("No vision_result found in state to persist.")
-        return {}
-        
-    # Import inside the node to avoid circular import issues
+def _db_persist_meal(result) -> None:
     from src.db.repository import MealRepository
     from src.db.database import SessionLocal
     
@@ -151,12 +142,28 @@ async def run_persist(state: AnalysisState) -> dict:
             "nutrition_source":   "Gemini",
             "is_estimated":       0,
         })
+    finally:
+        db.close()
+
+
+async def run_persist(state: AnalysisState) -> dict:
+    """
+    Persist the approved/analyzed meal to the database.
+    Called after user confirmation.
+    """
+    logger.info("Persist node invoked. Saving meal to database...")
+    result = state.get("vision_result")
+    if not result:
+        logger.warning("No vision_result found in state to persist.")
+        return {}
+        
+    import asyncio
+    try:
+        await asyncio.to_thread(_db_persist_meal, result)
         logger.info("Meal saved successfully in persist_node.")
     except Exception as e:
         logger.error(f"Failed to save meal in persist_node: {e}")
         return {"error": e}
-    finally:
-        db.close()
         
     return {}
 

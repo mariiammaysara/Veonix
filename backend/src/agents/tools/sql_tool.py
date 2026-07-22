@@ -18,7 +18,7 @@ from google.genai import types
 
 from src.config import settings
 from src.db.database import SessionLocal
-from src.models.meal import Meal
+from src.providers.vision.factory import get_gemini_client
 
 logger = logging.getLogger(__name__)
 
@@ -63,41 +63,10 @@ Return ONLY the raw JSON object. No explanation, no markdown formatting.
 """
 
 
-async def query_meal_history(question: str) -> str:
-    """
-    Translates a natural language question about meal history into a safe, parameterized SQLAlchemy query,
-    executes it, and returns a natural language response.
-    """
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+def _execute_history_query(query_type: str, column: str, time_range: str) -> str:
+    from src.db.database import SessionLocal
+    from src.models.meal import Meal
     
-    # 1. Ask Gemini to translate the question to structured JSON parameters
-    try:
-        response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[SYSTEM_PROMPT, f"Question: {question}"],
-            config=types.GenerateContentConfig(
-                temperature=0.0,
-                response_mime_type="application/json",
-            )
-        )
-        data = json.loads(response.text)
-    except Exception as e:
-        logger.error(f"Failed to parse question via Gemini: {e}")
-        return "I had trouble understanding your question. Please try asking about your calories, protein, or meals logged."
-
-    # 2. Strict input validation
-    query_type = data.get("query_type")
-    column = data.get("column")
-    time_range = data.get("time_range")
-    
-    if query_type not in ALLOWED_QUERY_TYPES:
-        raise ValueError(f"Disallowed query type: {query_type}")
-    if column not in ALLOWED_COLUMNS:
-        raise ValueError(f"Disallowed column: {column}")
-    if time_range not in ALLOWED_TIME_RANGES:
-        raise ValueError(f"Disallowed time range: {time_range}")
-
-    # 3. Build & execute SQLAlchemy query programmatically
     with SessionLocal() as db:
         query = db.query(Meal)
         
@@ -140,6 +109,42 @@ async def query_meal_history(question: str) -> str:
                         f"- {m.food_name}: {m.calories} kcal, {m.protein}g protein, {m.carbs}g carbs, {m.fat}g fat ({created_local})"
                     )
                 db_result_str = "Logged meals:\n" + "\n".join(meal_list)
+        return db_result_str
+
+
+async def query_meal_history(question: str) -> str:
+    """
+    Translates a natural language question about meal history into a safe, parameterized SQLAlchemy query,
+    executes it, and returns a natural language response.
+    """
+    client = get_gemini_client()
+    
+    # 1. Ask Gemini to translate the question to structured JSON parameters
+    response = await client.aio.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[SYSTEM_PROMPT, f"Question: {question}"],
+        config=types.GenerateContentConfig(
+            temperature=0.0,
+            response_mime_type="application/json",
+        )
+    )
+    data = json.loads(response.text)
+
+    # 2. Strict input validation
+    query_type = data.get("query_type")
+    column = data.get("column")
+    time_range = data.get("time_range")
+    
+    if query_type not in ALLOWED_QUERY_TYPES:
+        raise ValueError(f"Disallowed query type: {query_type}")
+    if column not in ALLOWED_COLUMNS:
+        raise ValueError(f"Disallowed column: {column}")
+    if time_range not in ALLOWED_TIME_RANGES:
+        raise ValueError(f"Disallowed time range: {time_range}")
+
+    # 3. Build & execute SQLAlchemy query programmatically off-thread
+    import asyncio
+    db_result_str = await asyncio.to_thread(_execute_history_query, query_type, column, time_range)
 
     # 4. Use Gemini to format the final friendly answer
     db_summary = f"Query Type: {query_type}, Column: {column}, Time Range: {time_range}, Database Result: {db_result_str}"

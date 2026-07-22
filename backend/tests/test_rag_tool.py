@@ -75,9 +75,9 @@ async def test_search_nutrition_knowledge_threshold():
     ]
     
     with patch("src.agents.tools.rag_tool._vector_store", mock_store):
-        with patch("src.agents.tools.rag_tool.genai.Client") as mock_client_class:
+        with patch("src.agents.tools.rag_tool.get_gemini_client") as mock_get_client:
             mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
+            mock_get_client.return_value = mock_client
             
             # Query embedding is at 45 degrees to [1.0, 0.0], yielding ~0.707 similarity
             mock_emb_values = [0.70710678, 0.70710678]

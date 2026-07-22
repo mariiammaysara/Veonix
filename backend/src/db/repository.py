@@ -49,6 +49,24 @@ class MealRepository:
         logger.info(f"Saved meal id={meal.id} — {meal.food_name}")
         return meal
 
+    def save_all(self, meals_data: list[dict]) -> list[Meal]:
+        """
+        Persists a batch of new meal analysis results in a single transaction.
+
+        Args:
+            meals_data: List of dictionaries containing validated meal attributes.
+
+        Returns:
+            List of saved Meal instances.
+        """
+        meals = [Meal(**data) for data in meals_data]
+        self.db.add_all(meals)
+        self.db.commit()
+        for meal in meals:
+            self.db.refresh(meal)
+        logger.info(f"Batch saved {len(meals)} meals.")
+        return meals
+
     def get_all(self, limit: int = 50, offset: int = 0) -> list[Meal]:
         """
         Retrieves meal history, newest first.

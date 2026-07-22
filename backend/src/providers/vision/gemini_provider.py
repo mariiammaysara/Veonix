@@ -39,7 +39,8 @@ class GeminiProvider:
     """
 
     def __init__(self):
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        from src.providers.vision.factory import get_gemini_client
+        self.client = get_gemini_client()
 
     async def analyze(self, image_bytes: bytes, prompt: Optional[str] = None) -> VisionResult:
         """
@@ -65,24 +66,56 @@ class GeminiProvider:
 
             logger.info(f"GeminiProvider.analyze() using model={settings.GEMINI_MODEL}")
 
-            # Trigger content generation with explicit JSON forcing
-            response = await self.client.aio.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=[effective_prompt, image],
-                config=types.GenerateContentConfig(
-                    # Temperature 0.1 ensures higher determinism for factual nutrition data
-                    temperature=0.1,
-                    # Eliminates markdown formatting around JSON for reliable parsing
-                    response_mime_type="application/json",
-                ),
-            )
+            # Import here to avoid circular import at module load time
+            from langfuse._client.get_client import get_client as _get_langfuse_client
+            langfuse = _get_langfuse_client()
 
-            raw_response = response.text
-            logger.info(f"Gemini raw response: {raw_response[:200]}...")
+            # Wrap the actual Gemini call as a Langfuse "generation" so that
+            # real latency and token counts appear in the trace (not just the
+            # graph shell latency which is always ~0ms).
+            with langfuse.start_as_current_observation(
+                name="gemini-vision-generate",
+                as_type="generation",
+                model=settings.GEMINI_MODEL,
+                input={"prompt_summary": effective_prompt[:300], "image_present": True},
+            ) as generation:
+                # Trigger content generation with explicit JSON forcing
+                response = await self.client.aio.models.generate_content(
+                    model=settings.GEMINI_MODEL,
+                    contents=[effective_prompt, image],
+                    config=types.GenerateContentConfig(
+                        # Temperature 0.1 ensures higher determinism for factual nutrition data
+                        temperature=0.1,
+                        # Eliminates markdown formatting around JSON for reliable parsing
+                        response_mime_type="application/json",
+                    ),
+                )
+
+                raw_response = response.text
+                logger.info(f"Gemini raw response: {raw_response[:200]}...")
+
+                # Extract token usage from Gemini response metadata if available
+                usage_details = None
+                if hasattr(response, "usage_metadata") and response.usage_metadata:
+                    um = response.usage_metadata
+                    usage_details = {}
+                    if hasattr(um, "prompt_token_count") and um.prompt_token_count:
+                        usage_details["input"] = um.prompt_token_count
+                    if hasattr(um, "candidates_token_count") and um.candidates_token_count:
+                        usage_details["output"] = um.candidates_token_count
+                    if hasattr(um, "total_token_count") and um.total_token_count:
+                        usage_details["total"] = um.total_token_count
+
+                # Update the generation span with output and token usage
+                generation.update(
+                    output=raw_response[:500],  # truncate long JSON for readability
+                    usage_details=usage_details or {},
+                )
 
             return parse_gemini_response(raw_response)
 
         except Exception as e:
             logger.error(f"Gemini API handshake failed: {str(e)}")
             raise VisionProviderError(f"Upstream AI error: {str(e)}")
+
 

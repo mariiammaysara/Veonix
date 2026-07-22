@@ -141,10 +141,10 @@ async def test_knowledge_node_uses_fast_model():
 
     # Patch all external calls
     with patch("src.agents.tools.rag_tool.search_nutrition_knowledge", new_callable=AsyncMock, return_value="Protein sources include chicken and tofu."):
-        with patch("google.genai.Client") as mock_client_cls:
+        with patch("src.agents.graph.get_gemini_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.aio.models.generate_content = AsyncMock(side_effect=fake_generate)
-            mock_client_cls.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
             await knowledge_node(state)
 
@@ -180,10 +180,10 @@ async def test_knowledge_node_model_name_logged(caplog):
         return resp
 
     with patch("src.agents.tools.rag_tool.search_nutrition_knowledge", new_callable=AsyncMock, return_value="Eggs contain ~70 kcal per large egg."):
-        with patch("google.genai.Client") as mock_client_cls:
+        with patch("src.agents.graph.get_gemini_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.aio.models.generate_content = AsyncMock(side_effect=fake_generate)
-            mock_client_cls.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
             with caplog.at_level(logging.INFO, logger="src.agents.graph"):
                 await knowledge_node(state)

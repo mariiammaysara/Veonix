@@ -37,9 +37,9 @@ async def test_supervisor_routing_table():
     for case in cases:
         if case["mock_intent"]:
             # Mock the Gemini classification call
-            with patch("google.genai.Client") as mock_client_class:
+            with patch("src.providers.vision.factory.get_gemini_client") as mock_get_client:
                 mock_client = MagicMock()
-                mock_client_class.return_value = mock_client
+                mock_get_client.return_value = mock_client
                 mock_resp = MagicMock()
                 mock_resp.text = case["mock_intent"]
                 mock_client.aio.models.generate_content = AsyncMock(return_value=mock_resp)
@@ -119,9 +119,11 @@ async def test_supervisor_text_only_routing():
 
     # Mock the Gemini classification to return "knowledge_node"
     # Mock the search knowledge RAG tool and formatting LLM call
-    with patch("google.genai.Client") as mock_client_class:
+    with patch("src.agents.supervisor.get_gemini_client") as mock_get_client_sup, \
+         patch("src.agents.graph.get_gemini_client") as mock_get_client_graph:
         mock_client = MagicMock()
-        mock_client_class.return_value = mock_client
+        mock_get_client_sup.return_value = mock_client
+        mock_get_client_graph.return_value = mock_client
         
         # Mock classication response
         mock_classify_resp = MagicMock()
