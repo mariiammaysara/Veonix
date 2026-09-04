@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import { useMealHistory } from "@/hooks/use-meal-history";
 import type { MealHistoryItem } from "@/lib/types";
 
@@ -112,6 +113,8 @@ export default function HistoryPage() {
           50% { opacity: 0.8; }
         }
       `}</style>
+
+      <Footer />
     </div>
   );
 }

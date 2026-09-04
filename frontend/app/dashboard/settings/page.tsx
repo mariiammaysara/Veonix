@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import LoadingScreen from "@/components/LoadingScreen";
 
 const STORAGE_KEY = "veonix.preferences";
@@ -191,6 +192,8 @@ export default function SettingsPage() {
           ← Go back to dashboard
         </button>
       </div>
+
+      <Footer />
     </div>
   );
 }
