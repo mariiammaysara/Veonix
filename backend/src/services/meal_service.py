@@ -36,9 +36,6 @@ class MealService:
         - MealRepository
     """
 
-    def __init__(self):
-        self.vision = get_vision_provider()
-
     async def analyze(self, image_bytes: bytes, db: Session) -> dict:
         """
         Executes the non-linear analysis pipeline: Compress -> Analyze -> Save -> Return.
@@ -58,7 +55,10 @@ class MealService:
         compressed = compress_image(image_bytes)
 
         # Step 2: Invoke Gemini for consolidated food + nutrition analysis
-        result = await self.vision.analyze(compressed)
+        # Resolved lazily (not in __init__) so constructing MealService never
+        # requires a configured Gemini client for endpoints that don't need it.
+        vision = get_vision_provider()
+        result = await vision.analyze(compressed)
         logger.info(f"Gemini: {result.food_name} ({result.confidence:.0%}) — {result.calories} kcal")
 
         # Step 3: Enforce confidence threshold before persistence

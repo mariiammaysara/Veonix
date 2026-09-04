@@ -129,7 +129,12 @@ CONFIDENCE_THRESHOLD = 0.5
 
 
 def _format_meal_result(result) -> dict:
-    """Formats a VisionResult into the standard API response shape for one meal."""
+    """Formats a VisionResult into the standard API response shape for one meal.
+
+    `persisted` tells the frontend whether this result was actually saved to
+    history — results below CONFIDENCE_THRESHOLD are still returned so the
+    user can see what was detected, but are never written to the database.
+    """
     return {
         "food_name": result.food_name,
         "confidence": result.confidence,
@@ -137,6 +142,7 @@ def _format_meal_result(result) -> dict:
         "weight_grams": result.estimated_weight_grams,
         "meal_type": result.meal_type,
         "cuisine": result.cuisine,
+        "persisted": result.confidence >= CONFIDENCE_THRESHOLD,
         "nutrition": {
             "calories": result.calories,
             "protein": result.protein,
@@ -169,7 +175,8 @@ async def _analyze_single_image(image_bytes: bytes, index: int):
 
 
 def _aggregate_results(meal_results: list[dict]) -> dict:
-    """Reduce step: sums macros across all successfully analyzed meals."""
+    """Reduce step: sums macros across meals that were actually persisted
+    (i.e. met CONFIDENCE_THRESHOLD), so totals match what shows up in history."""
     totals = {
         "total_calories": 0.0,
         "total_protein": 0.0,
@@ -179,7 +186,7 @@ def _aggregate_results(meal_results: list[dict]) -> dict:
         "total_sodium": 0.0,
     }
     for meal in meal_results:
-        if meal is None:
+        if meal is None or not meal.get("persisted"):
             continue
         nutrition = meal.get("nutrition", {})
         totals["total_calories"] += nutrition.get("calories") or 0

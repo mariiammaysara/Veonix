@@ -25,7 +25,10 @@ class Settings(BaseSettings):
 
     # ── Application Metadata ──────────────────────────────────
     DEBUG: bool = False
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "https://veonix.mariammaysara.com",
+    ]
 
     class Config:
         env_file = ".env"

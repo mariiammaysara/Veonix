@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import UploadBox from "@/components/upload-box";
 import ResultsDisplay from "@/components/results-display";
 import BatchResultsDisplay from "@/components/batch-results-display";
@@ -245,6 +246,8 @@ export default function UploadPage() {
           </>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }

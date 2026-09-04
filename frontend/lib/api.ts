@@ -126,7 +126,19 @@ export async function getMealHistory(
 }
 
 export async function deleteMeal(id: number): Promise<void> {
-  await fetch(`${BASE_URL}/analyze/${id}`, { method: "DELETE" });
+  const response = await fetch(`${BASE_URL}/analyze/${id}`, { method: "DELETE" });
+
+  if (!response.ok) {
+    let errorBody: ApiErrorResponse | null = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      // ignore
+    }
+    const message = errorBody?.error?.message ?? "Failed to delete meal.";
+    const code = errorBody?.error?.code ?? "UNKNOWN_ERROR";
+    throw new ApiError(message, response.status, code);
+  }
 }
 
 export async function getStats(): Promise<StatsResponse> {

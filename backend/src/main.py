@@ -49,10 +49,7 @@ app = FastAPI(
 # Must be defined early to intercept preflight requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://veonix.mariammaysara.com",
-        "http://localhost:3000",
-    ],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

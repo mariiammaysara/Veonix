@@ -8,9 +8,11 @@ Provides uptime visibility and direct AI provider integration testing.
 Author: Mariam Maysara
 """
 
+import asyncio
 import logging
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from src.config import settings
+from src.controllers.analyze import ALLOWED_TYPES, MAX_SIZE_BYTES
 
 logger = logging.getLogger(__name__)
 # Infrastructure router; excluded from user-facing stats/history logic
@@ -44,12 +46,21 @@ async def debug_vision(file: UploadFile = File(...)):
     Sends an image directly to Gemini and returns the un-parsed raw text response.
     Bypasses the response_parser and DB layer to verify if the model 'sees' the image.
 
+    Gated behind settings.DEBUG: this endpoint has no rate limiting and calls
+    the paid Gemini API directly, so it must never be reachable in production.
+
     Args:
         file: Multipart image file to analyze.
 
     Returns:
         The raw response string from Gemini and diagnostic metadata.
     """
+    if not settings.DEBUG:
+        raise HTTPException(status_code=403, detail="Debug endpoint is disabled.")
+
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=415, detail="Unsupported image type.")
+
     from google import genai
     from google.genai import types
     from PIL import Image
@@ -57,12 +68,17 @@ async def debug_vision(file: UploadFile = File(...)):
     from src.helpers.prompts import GEMINI_PROMPT
 
     image_bytes = await file.read()
-    image = Image.open(io.BytesIO(image_bytes))
 
+    if len(image_bytes) > MAX_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="Image exceeds the size limit.")
+
+    image = Image.open(io.BytesIO(image_bytes))
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     try:
-        response = client.models.generate_content(
+        # Runs the blocking SDK call in a worker thread so it doesn't stall the event loop.
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model=settings.GEMINI_MODEL,
             contents=[GEMINI_PROMPT, image],
             config=types.GenerateContentConfig(
