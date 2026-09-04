@@ -5,9 +5,10 @@
 <h1 align="center">Veonix</h1>
 
 <p align="center">
+  <a href="https://github.com/mariiammaysara/Veonix/actions/workflows/ci.yml"><img src="https://github.com/mariiammaysara/Veonix/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Next.js-15.0%2B-000000.svg" alt="Next.js">
+  <img src="https://img.shields.io/badge/FastAPI-0.116-009688.svg" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Next.js-16.3-000000.svg" alt="Next.js">
   <img src="https://img.shields.io/badge/Gemini-2.5%20Flash-4285F4.svg" alt="Gemini">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
 </p>
