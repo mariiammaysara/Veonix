@@ -4,14 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
 import LoadingScreen from "@/components/LoadingScreen";
-import { getProfile, updateProfile } from "@/lib/api";
-import { getUserFriendlyError } from "@/lib/error-utils";
+
+const STORAGE_KEY = "veonix.preferences";
 
 /**
- * Veonix — Settings / User Profile Page
- * 
- * Provides a premium interface for managing nutritional goals and allergies.
- * Persists the values in the database and updates LangGraph Store memory context.
+ * Veonix — Settings / Local Preferences Page
+ *
+ * A lightweight, client-only note for a dietary goal and allergies.
+ * There is no backend profile system (no auth exists yet), so these
+ * values are stored in this browser only via localStorage — they are
+ * not synced to the server or used to influence AI analysis.
  */
 export default function SettingsPage() {
   const router = useRouter();
@@ -23,18 +25,18 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const profile = await getProfile();
-        setGoal(profile.dietary_goal || "");
-        setAllergyInput((profile.allergies || []).join(", "));
-      } catch (err: unknown) {
-        setError(getUserFriendlyError(err).message);
-      } finally {
-        setLoading(false);
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const prefs = JSON.parse(raw) as { dietary_goal?: string; allergies?: string[] };
+        setGoal(prefs.dietary_goal || "");
+        setAllergyInput((prefs.allergies || []).join(", "));
       }
+    } catch {
+      // localStorage unavailable or corrupted — start fresh
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -50,11 +52,14 @@ export default function SettingsPage() {
       .filter((item) => item.length > 0);
 
     try {
-      await updateProfile(goal, allergiesList);
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ dietary_goal: goal, allergies: allergiesList })
+      );
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: unknown) {
-      setError(getUserFriendlyError(err).message);
+    } catch {
+      setError("Couldn't save preferences on this device. Try enabling site data / cookies.");
     } finally {
       setSaving(false);
     }
@@ -79,10 +84,10 @@ export default function SettingsPage() {
 
         <div className="anim-fade-up" style={{ textAlign: "center", marginBottom: "8px" }}>
           <h1 style={{ fontSize: "clamp(22px, 3vw, 28px)", fontWeight: 800, color: "#f1f5f9", marginBottom: "8px" }}>
-            Profile & Memory Settings
+            Preferences
           </h1>
           <p style={{ fontSize: "14px", color: "#64748b", maxWidth: "400px", lineHeight: 1.6, margin: "0 auto" }}>
-            Customize your coach's memory with your dietary goal and allergies.
+            A personal note on this device — your dietary goal and allergies. Saved locally in your browser only.
           </p>
         </div>
 
@@ -133,7 +138,7 @@ export default function SettingsPage() {
               className="focus:border-emerald-500/50"
             />
             <span style={{ fontSize: "11px", color: "#475569" }}>
-              Separate multiple allergies with commas. The coach will warn you if any ingredient matches.
+              Separate multiple allergies with commas. This is a personal reminder only — it's not checked automatically.
             </span>
           </div>
 
@@ -154,7 +159,7 @@ export default function SettingsPage() {
               border: "1px solid rgba(16, 185, 129, 0.15)", borderRadius: "12px",
               color: "#34d399", fontSize: "12px", textAlign: "center", fontWeight: 600
             }}>
-              ✓ Memory updated successfully!
+              ✓ Preferences saved on this device!
             </div>
           )}
 
@@ -170,7 +175,7 @@ export default function SettingsPage() {
               opacity: saving ? 0.7 : 1, transition: "opacity .2s"
             }}
           >
-            {saving ? "Updating memory..." : "Save Settings"}
+            {saving ? "Saving..." : "Save Settings"}
           </button>
         </form>
 

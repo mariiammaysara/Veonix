@@ -75,8 +75,7 @@ def test_batch_analysis_aggregates_totals_and_persists():
         db.commit()
 
         # Patch compression and GeminiProvider
-        with patch("src.agents.graph.compress_image", lambda x: x), \
-             patch("src.helpers.image_processor.compress_image", lambda x: x), \
+        with patch("src.controllers.analyze.compress_image", lambda x: x), \
              patch("src.providers.vision.gemini_provider.GeminiProvider.analyze", mock_analyze):
 
             # Post two files to /analyze/images/batch

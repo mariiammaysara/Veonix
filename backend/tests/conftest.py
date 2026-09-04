@@ -14,8 +14,7 @@ def setup_test_database():
     """
     # Import all models to ensure they are registered with Base.metadata
     from src.models.meal import Meal  # noqa: F401
-    from src.models.profile import UserProfile  # noqa: F401
-    
+
     Base.metadata.create_all(bind=engine)
     yield
 

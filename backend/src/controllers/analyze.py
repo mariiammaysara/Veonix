@@ -9,12 +9,19 @@ This module contains zero business logic; it merely delegates to MealService.
 Author: Mariam Maysara
 """
 
+import asyncio
 import logging
+from typing import List
+
 from fastapi import APIRouter, UploadFile, File, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+
 from src.services.meal_service import MealService
-from src.db.database import get_db
+from src.db.database import get_db, SessionLocal
+from src.db.repository import MealRepository
+from src.providers.vision.factory import get_vision_provider
+from src.helpers.image_processor import compress_image
 from src.exceptions import (
     VisionProviderError,
     LowConfidenceError,
@@ -34,6 +41,7 @@ router = APIRouter(prefix="/analyze", tags=["Analysis"])
 # Validated at the controller boundary to fail fast.
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_SIZE_BYTES = 10 * 1024 * 1024  # 10MB payload limit
+MAX_BATCH = 10
 
 
 def error_response(error_code: ErrorCode, detail: str = "") -> JSONResponse:
@@ -69,7 +77,7 @@ async def analyze_image(
 ):
     """
     Upload a food image and receive a full nutrition analysis.
-    Coordinates between the multipart file upload and the background analysis pipeline.
+    Coordinates between the multipart file upload and the analysis pipeline.
 
     Args:
         file: Multipart image file.
@@ -88,65 +96,7 @@ async def analyze_image(
         return error_response(ErrorCode.IMAGE_TOO_LARGE)
 
     try:
-        import uuid
-        from src.agents.supervisor import main_graph
-        thread_id = f"meal-{uuid.uuid4()}"
-        
-        # Step 1: Run the LangGraph flow with thread_id
-        from src.agents.graph import run_analysis_graph
-        state = await run_analysis_graph(image_bytes, thread_id=thread_id)
-
-        # Step 2: Handle graph errors
-        if state.get("error"):
-            err = state["error"]
-            # Graph nodes now store structured error dicts (error_type, provider, message);
-            # unwrap to a real exception so our existing exception handlers still work.
-            if isinstance(err, dict):
-                raise VisionProviderError(err.get("message", "Unknown graph error"))
-            raise err
-
-        result = state["vision_result"]
-
-        # Step 3: Enforce confidence threshold before returning result
-        from src.services.meal_service import CONFIDENCE_THRESHOLD
-        if result.confidence < CONFIDENCE_THRESHOLD:
-            raise LowConfidenceError(result.confidence)
-
-        # Step 4: Format the response shape
-        formatted_result = {
-            "food_name":   result.food_name,
-            "confidence":  result.confidence,
-            "ingredients": result.ingredients,
-            "weight_grams": result.estimated_weight_grams,
-            "meal_type":   result.meal_type,
-            "cuisine":     result.cuisine,
-            "allergies_warning": state.get("allergies_warning"),
-            "nutrition": {
-                "calories": result.calories,
-                "protein":  result.protein,
-                "carbs":    result.carbs,
-                "fat":      result.fat,
-                "fiber":    result.fiber,
-                "sodium":   result.sodium,
-                "per_100g": result.per_100g,
-                "source":   "Gemini",
-                "is_estimated": False,
-            },
-        }
-
-        # Step 5: Check if graph was interrupted at persist_node breakpoint
-        config = {"configurable": {"thread_id": thread_id}}
-        state_info = await main_graph.aget_state(config)
-        
-        if "persist_node" in state_info.next:
-            return {
-                "status": "pending_confirmation",
-                "data": {
-                    "thread_id": thread_id,
-                    "analysis": formatted_result
-                }
-            }
-
+        formatted_result = await meal_service.analyze(image_bytes, db)
         return {"status": "success", "data": formatted_result}
 
     except LowConfidenceError as e:
@@ -167,209 +117,134 @@ async def analyze_image(
         return error_response(ErrorCode.INTERNAL_ERROR)
 
 
-# ── SSE Streaming Endpoint ────────────────────────────────────────────────────
+# ── Batch Analysis ────────────────────────────────────────────────────────────
+#
+# Plain asyncio.gather fan-out over the same vision provider used by the single-
+# image endpoint. Each image is analyzed independently and concurrently; results
+# below the confidence threshold are skipped (not persisted) but still reported
+# back so the frontend can show which images failed. Successful meals are then
+# persisted in a single batch transaction and totals are aggregated.
 
-import json as _json
-from fastapi.responses import StreamingResponse
+CONFIDENCE_THRESHOLD = 0.5
 
 
-def _sse(event: str, data: dict) -> str:
-    """Format a single SSE line: `data: {...}\n\n`"""
-    return f"data: {_json.dumps({'event': event, **data})}\n\n"
+def _format_meal_result(result) -> dict:
+    """Formats a VisionResult into the standard API response shape for one meal."""
+    return {
+        "food_name": result.food_name,
+        "confidence": result.confidence,
+        "ingredients": result.ingredients,
+        "weight_grams": result.estimated_weight_grams,
+        "meal_type": result.meal_type,
+        "cuisine": result.cuisine,
+        "nutrition": {
+            "calories": result.calories,
+            "protein": result.protein,
+            "carbs": result.carbs,
+            "fat": result.fat,
+            "fiber": result.fiber,
+            "sodium": result.sodium,
+            "per_100g": result.per_100g,
+            "source": "Gemini",
+            "is_estimated": False,
+        },
+    }
 
 
-async def _stream_image_analysis(image_bytes: bytes) -> None:
+async def _analyze_single_image(image_bytes: bytes, index: int):
     """
-    Async generator that drives each vision pipeline step manually,
-    yielding SSE events between steps so the frontend can display
-    real-time progress without polling.
-
-    PERFORMANCE NOTE: Gemini is called ONCE here (Step 3).
-    The pre-computed vision_result is then injected directly into the
-    LangGraph state so vision_node is bypassed, eliminating the
-    previously redundant second Gemini call.
-
-    Yields:
-        SSE-formatted strings with named progress events.
+    Runs the vision provider on a single image. Returns the raw VisionResult,
+    or None if analysis failed (error is logged, not raised, so one bad image
+    in a batch doesn't fail the whole request).
     """
-    import uuid
-    import time
-    from src.helpers.image_processor import compress_image
-    from src.providers.vision.factory import get_vision_provider
-    from src.helpers.prompts import build_vision_prompt
-    from src.agents.store import NutritionCoachingStore
-    from src.agents.supervisor import main_graph
-    from src.services.meal_service import CONFIDENCE_THRESHOLD
-
-    thread_id = f"meal-stream-{uuid.uuid4()}"
-    t_request_start = time.perf_counter()
-
     try:
-        # Step 1: compress
-        yield _sse("start", {"message": "Compressing image...", "thread_id": thread_id})
-        t0 = time.perf_counter()
         compressed = compress_image(image_bytes)
-        logger.info(f"[PERF] compress_image: {(time.perf_counter()-t0)*1000:.1f}ms")
-
-        # Step 2: load profile for goal-aware prompt
-        yield _sse("profile", {"message": "Loading profile..."})
-        t0 = time.perf_counter()
-        store = NutritionCoachingStore()
-        profile = store.get_profile()
-        dietary_goal = profile.get("dietary_goal")
-        prompt = build_vision_prompt(dietary_goal)
-        logger.info(f"[PERF] profile_load: {(time.perf_counter()-t0)*1000:.1f}ms")
-
-        # Step 3: call vision model — ONLY Gemini call in this pipeline
-        yield _sse("vision_start", {"message": "Calling vision model..."})
-        t0 = time.perf_counter()
         provider = get_vision_provider()
-        result = await provider.analyze(compressed, prompt=prompt)
-        logger.info(
-            f"[PERF] gemini_vision_call: {(time.perf_counter()-t0)*1000:.1f}ms "
-            f"| food='{result.food_name}' confidence={result.confidence:.0%}"
-        )
-        yield _sse("vision_done", {
-            "message": f"Food identified: {result.food_name}",
-            "food_name": result.food_name,
-            "confidence": result.confidence,
-        })
+        result = await provider.analyze(compressed)
+        logger.info(f"Batch[{index}]: {result.food_name} ({result.confidence:.0%})")
+        return result
+    except Exception as e:
+        logger.error(f"Batch[{index}]: analysis failed: {e}")
+        return None
 
-        # Step 4: confidence check
-        if result.confidence < CONFIDENCE_THRESHOLD:
-            yield _sse("low_confidence", {
-                "message": "Low confidence — please retake photo",
+
+def _aggregate_results(meal_results: list[dict]) -> dict:
+    """Reduce step: sums macros across all successfully analyzed meals."""
+    totals = {
+        "total_calories": 0.0,
+        "total_protein": 0.0,
+        "total_carbs": 0.0,
+        "total_fat": 0.0,
+        "total_fiber": 0.0,
+        "total_sodium": 0.0,
+    }
+    for meal in meal_results:
+        if meal is None:
+            continue
+        nutrition = meal.get("nutrition", {})
+        totals["total_calories"] += nutrition.get("calories") or 0
+        totals["total_protein"] += nutrition.get("protein") or 0
+        totals["total_carbs"] += nutrition.get("carbs") or 0
+        totals["total_fat"] += nutrition.get("fat") or 0
+        totals["total_fiber"] += nutrition.get("fiber") or 0
+        totals["total_sodium"] += nutrition.get("sodium") or 0
+
+    return {k: round(v, 1) for k, v in totals.items()}
+
+
+def _persist_batch_meals(results: list) -> None:
+    """Persists all successfully analyzed meals in a single transaction."""
+    db = SessionLocal()
+    try:
+        meals_to_save = []
+        for result in results:
+            if result is None or result.confidence < CONFIDENCE_THRESHOLD:
+                continue
+            meals_to_save.append({
+                "food_name": result.food_name,
+                "cuisine": result.cuisine,
+                "meal_type": result.meal_type,
+                "preparation_method": result.preparation_method,
+                "weight_grams": result.estimated_weight_grams,
                 "confidence": result.confidence,
-            })
-            return
-
-        # Step 5: allergy check
-        yield _sse("allergy_check", {"message": "Checking allergies..."})
-        allergies = [a.strip().lower() for a in profile.get("allergies", []) if a.strip()]
-        food_lower = result.food_name.lower()
-        ingredients = [i.lower() for i in (result.ingredients or [])]
-        matched = []
-        for allergy in allergies:
-            if allergy in food_lower or any(allergy in ing for ing in ingredients):
-                matched.append(allergy)
-        allergies_warning = (
-            f"Warning: may contain allergens: {', '.join(matched)}." if matched else None
-        )
-
-        # Step 6: format result
-        formatted = {
-            "food_name": result.food_name,
-            "confidence": result.confidence,
-            "ingredients": result.ingredients,
-            "weight_grams": result.estimated_weight_grams,
-            "meal_type": result.meal_type,
-            "cuisine": result.cuisine,
-            "allergies_warning": allergies_warning,
-            "nutrition": {
                 "calories": result.calories,
                 "protein": result.protein,
                 "carbs": result.carbs,
                 "fat": result.fat,
                 "fiber": result.fiber,
                 "sodium": result.sodium,
+                "ingredients": result.ingredients,
                 "per_100g": result.per_100g,
-                "source": "Gemini",
-                "is_estimated": False,
-            },
-        }
-
-        # Step 7: hand off pre-computed vision_result to the graph.
-        # The supervisor detects vision_result in state and skips vision_node,
-        # going directly to persist_node — eliminating the redundant Gemini call.
-        yield _sse("saving", {"message": "Awaiting confirmation..."})
-        t0 = time.perf_counter()
-        from src.agents.graph import run_analysis_graph
-        state = await run_analysis_graph(
-            vision_result=result,
-            allergies_warning=allergies_warning,
-            thread_id=thread_id,
-        )
-        logger.info(f"[PERF] langgraph_invoke: {(time.perf_counter()-t0)*1000:.1f}ms")
-        config = {"configurable": {"thread_id": thread_id}}
-        state_info = await main_graph.aget_state(config)
-
-        logger.info(
-            f"[PERF] total_stream_pipeline: {(time.perf_counter()-t_request_start)*1000:.1f}ms"
-        )
-
-        if "persist_node" in state_info.next:
-            yield _sse("pending_confirmation", {
-                "message": "Pending your confirmation before saving.",
-                "thread_id": thread_id,
-                "result": formatted,
+                "nutrition_source": "Gemini",
+                "is_estimated": 0,
             })
-        else:
-            yield _sse("done", {
-                "message": "Analysis complete.",
-                "thread_id": thread_id,
-                "result": formatted,
-            })
-
-    except LowConfidenceError as e:
-        yield _sse("error", {"message": f"Low confidence: {e.confidence:.0%}", "code": "LOW_CONFIDENCE"})
+        if meals_to_save:
+            MealRepository(db).save_all(meals_to_save)
+            logger.info(f"Batch: persisted {len(meals_to_save)} meals.")
     except Exception as e:
-        logger.exception(f"Stream error: {e}")
-        yield _sse("error", {"message": "Analysis failed. Please try again.", "code": "INTERNAL_ERROR"})
-
-
-@router.post("/image/stream")
-async def analyze_image_stream(file: UploadFile = File(...)):
-    """
-    Streams vision analysis progress as Server-Sent Events (SSE).
-    Each event is a JSON line: `data: {"event": "...", "message": "..."}\n\n`
-
-    Events in order:
-      start → profile → vision_start → vision_done →
-      allergy_check → saving → pending_confirmation | done | error
-    """
-    if file.content_type not in ALLOWED_TYPES:
-        return error_response(ErrorCode.INVALID_IMAGE_FORMAT)
-
-    image_bytes = await file.read()
-
-    if len(image_bytes) > MAX_SIZE_BYTES:
-        return error_response(ErrorCode.IMAGE_TOO_LARGE)
-
-    return StreamingResponse(
-        _stream_image_analysis(image_bytes),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",  # Disable nginx buffering for true streaming
-        },
-    )
-
-
-# ── Batch Analysis Endpoint ───────────────────────────────────────────────────
-
-from typing import List
+        logger.error(f"Batch: database persistence failed: {e}")
+    finally:
+        db.close()
 
 
 @router.post("/images/batch")
 async def analyze_images_batch(
     files: List[UploadFile] = File(...),
-    db: Session = Depends(get_db),
 ):
     """
     Upload multiple food images and receive parallel nutrition analysis.
-    Fan-out: all images analyzed concurrently via asyncio.gather.
-    Reduce: aggregate totals (calories, protein, carbs, fat) computed after.
+    Fan-out: all images analyzed concurrently via asyncio.gather, calling the
+    same vision provider used by the single-image endpoint directly.
+    Reduce: aggregate totals (calories, protein, carbs, fat, fiber, sodium).
 
-    Bypasses HITL confirmation — batch saves immediately.
+    Successfully analyzed meals are persisted immediately (no confirmation step).
 
     Args:
-        files: Up to 10 image files (JPEG, PNG, WEBP), each ≤10 MB.
+        files: Up to 10 image files (JPEG, PNG, WEBP), each <=10 MB.
 
     Returns:
-        { meals: [...per-meal results], aggregate: { total_calories, ... } }
+        { meals: [...per-meal results | null], aggregate: { total_calories, ... } }
     """
-    MAX_BATCH = 10
-
     if len(files) > MAX_BATCH:
         return JSONResponse(
             status_code=400,
@@ -427,14 +302,30 @@ async def analyze_images_batch(
         images.append(raw)
 
     try:
-        from src.agents.batch import analyze_images_parallel
-        batch_result = await analyze_images_parallel(images)
-        return {"status": "success", "data": batch_result}
+        # Fan-out: all images analyzed concurrently
+        results = await asyncio.gather(
+            *[_analyze_single_image(img, i) for i, img in enumerate(images)]
+        )
+
+        # Map: format each result into a standardized meal dict
+        meal_results = [
+            _format_meal_result(r) if r is not None else None for r in results
+        ]
+
+        # Reduce: aggregate nutrition totals
+        aggregate = _aggregate_results(meal_results)
+
+        # Persist all successfully analyzed meals in a background thread
+        await asyncio.to_thread(_persist_batch_meals, list(results))
+
+        return {
+            "status": "success",
+            "data": {"meals": meal_results, "aggregate": aggregate},
+        }
 
     except Exception as e:
         logger.exception(f"Batch analysis error: {e}")
         return error_response(ErrorCode.INTERNAL_ERROR, str(e))
-
 
 
 @router.get("/history")

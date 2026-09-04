@@ -70,26 +70,10 @@ export interface ApiErrorResponse {
     };
 }
 
-export interface UserProfile {
-    user_id: string;
+// Local-only preference note, kept in the browser (no backend profile system).
+export interface LocalPreferences {
     dietary_goal: string;
     allergies: string[];
-}
-
-export interface AnalysisResponse {
-    status: string;
-    thread_id?: string;
-    analysis: MealResult;
-}
-
-export interface StreamEvent {
-    event: "start" | "profile" | "vision_start" | "vision_done" | "allergy_check" | "saving" | "pending_confirmation" | "done" | "error" | "low_confidence";
-    message: string;
-    thread_id?: string;
-    food_name?: string;
-    confidence?: number;
-    result?: MealResult;
-    code?: string;
 }
 
 export interface BatchMealResult extends MealResult {

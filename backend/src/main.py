@@ -15,16 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.controllers.analyze import router as analyze_router
-from src.controllers.coach import router as coach_router
 from src.controllers.health import router as health_router
-from src.controllers.profile import router as profile_router
 from src.middleware.request_id import RequestIdMiddleware
 from src.middleware.request_logger import RequestLoggerMiddleware
 from src.middleware.timing import TimingMiddleware
-# Agent-level trace middleware: injected per graph invocation (not HTTP middleware)
-from src.middleware.agent_trace import AgentTraceCallback  # noqa: F401
 from src.enums.error_codes import ErrorCode
 from src.controllers.analyze import error_response
+from src.db.database import init_db
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +32,8 @@ async def lifespan(app: FastAPI):
     Handles application startup and shutdown lifecycle events.
     Preferred over deprecated on_event handlers for robust resource management.
     """
+    # Initialize database schema on startup
+    init_db()
     yield
     # Resources are automatically cleaned up after yield
 
@@ -67,8 +66,6 @@ app.add_middleware(RequestIdMiddleware)
 # API Routers
 # analyze_router handles core business logic; health_router for infrastructure checks
 app.include_router(analyze_router)
-app.include_router(coach_router)
-app.include_router(profile_router)
 app.include_router(health_router)
 
 

@@ -11,9 +11,6 @@ import type {
   MealHistoryResponse,
   StatsResponse,
   ApiErrorResponse,
-  UserProfile,
-  AnalysisResponse,
-  StreamEvent,
   BatchResult,
 } from "./types";
 
@@ -61,7 +58,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Endpoints ──────────────────────────────────────────────
 
-export async function analyzeImage(file: File): Promise<AnalysisResponse> {
+export async function analyzeImage(file: File): Promise<MealResult> {
   const form = new FormData();
   form.append("file", file);
 
@@ -83,70 +80,7 @@ export async function analyzeImage(file: File): Promise<AnalysisResponse> {
   }
 
   const body = await response.json();
-  if (body.status === "pending_confirmation") {
-    return {
-      status: "pending_confirmation",
-      thread_id: body.data.thread_id,
-      analysis: body.data.analysis,
-    };
-  }
-  return {
-    status: "success",
-    analysis: body.data,
-  };
-}
-
-/**
- * analyzeImageStream — streams SSE analysis progress events.
- *
- * Opens a fetch SSE connection to POST /analyze/image/stream and calls
- * onEvent for each parsed event line. The final event carries the full result.
- *
- * @param file     The image file to analyze.
- * @param onEvent  Callback called for every received SSE event object.
- */
-export async function analyzeImageStream(
-  file: File,
-  onEvent: (event: StreamEvent) => void
-): Promise<void> {
-  const form = new FormData();
-  form.append("file", file);
-
-  const response = await fetch(`${BASE_URL}/analyze/image/stream`, {
-    method: "POST",
-    body: form,
-  });
-
-  if (!response.ok || !response.body) {
-    throw new ApiError("Stream request failed", response.status);
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-
-    // SSE lines are separated by double newlines; parse complete events only
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() ?? ""; // keep the incomplete last part
-
-    for (const part of parts) {
-      const line = part.trim();
-      if (!line.startsWith("data:")) continue;
-      const jsonStr = line.slice(5).trim();
-      try {
-        const event = JSON.parse(jsonStr) as StreamEvent;
-        onEvent(event);
-      } catch {
-        // malformed line — skip
-      }
-    }
-  }
+  return body.data as MealResult;
 }
 
 /**
@@ -201,49 +135,4 @@ export async function getStats(): Promise<StatsResponse> {
 
 export async function checkHealth(): Promise<{ status: string }> {
   return request<{ status: string }>("/health");
-}
-
-export async function askCoach(question: string): Promise<{ answer: string }> {
-  return request<{ answer: string }>("/coach/ask", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ question }),
-  });
-}
-
-export async function getProfile(): Promise<UserProfile> {
-  return request<UserProfile>("/profile");
-}
-
-export async function updateProfile(
-  dietary_goal: string,
-  allergies: string[]
-): Promise<UserProfile> {
-  return request<UserProfile>("/profile", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ dietary_goal, allergies }),
-  });
-}
-
-export async function confirmMeal(
-  threadId: string,
-  action: "approve" | "reject",
-  edits?: Partial<MealResult>
-): Promise<{ message: string }> {
-  return request<{ message: string }>(`/coach/confirm/${threadId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ action, edits }),
-  });
-}
-
-export async function getHistory(threadId: string): Promise<any[]> {
-  return request<any[]>(`/coach/history/${threadId}`);
 }
