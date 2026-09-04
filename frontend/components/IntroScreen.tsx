@@ -11,7 +11,7 @@ export default function IntroScreen({ onComplete }: IntroScreenProps) {
     const [isVisible, setIsVisible] = useState(true);
 
     useEffect(() => {
-        // Check session storage
+        // Check session storage to avoid repeating the intro on every visit
         const hasSeenIntro = sessionStorage.getItem("veonix_intro_seen");
 
         if (hasSeenIntro) {
@@ -20,12 +20,12 @@ export default function IntroScreen({ onComplete }: IntroScreenProps) {
             return;
         }
 
-        // Set flag and timer
+        // Timer for the intro presentation
         const timer = setTimeout(() => {
             sessionStorage.setItem("veonix_intro_seen", "true");
             setIsVisible(false);
-            setTimeout(onComplete, 1000); // Allow exit animation to finish
-        }, 2500);
+            setTimeout(onComplete, 800); // Allow exit animation to complete smoothly
+        }, 2200);
 
         return () => clearTimeout(timer);
     }, [onComplete]);
@@ -40,67 +40,88 @@ export default function IntroScreen({ onComplete }: IntroScreenProps) {
                 <motion.div
                     key="intro-overlay"
                     initial={{ opacity: 1 }}
-                    exit={{ opacity: 0, transition: { duration: 0.8, ease: "easeInOut" } }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-b from-[#020617] to-[#03122f] overflow-hidden"
+                    exit={{ opacity: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
+                    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#020617] overflow-hidden"
                 >
-                    {/* Ambient Glow */}
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    {/* Ambient Glow - Soft, elegant, and minimal */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 0.4, scale: 1.2 }}
-                            transition={{ duration: 2, ease: "easeOut" }}
-                            className="w-[500px] h-[500px] bg-emerald-500/20 rounded-full blur-[120px]"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 0.15, scale: 1.1 }}
+                            transition={{ duration: 1.8, ease: "easeOut" }}
+                            className="w-[450px] h-[450px] bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 rounded-full blur-[100px]"
                         />
                     </div>
 
-                    {/* 3D Text Container */}
-                    <div className="relative perspective-1000">
+                    {/* Logo & Brand Name Container */}
+                    <div className="flex flex-col items-center gap-6 z-10">
+                        {/* Elegant Line-Art Logo */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{
+                                duration: 1.2,
+                                ease: [0.16, 1, 0.3, 1]
+                            }}
+                            className="relative"
+                        >
+                            <svg width="60" height="60" viewBox="0 0 100 100" fill="none" className="drop-shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                                <motion.path
+                                    d="M25 70L50 25L75 70"
+                                    stroke="#10b981"
+                                    strokeWidth="4.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    initial={{ pathLength: 0 }}
+                                    animate={{ pathLength: 1 }}
+                                    transition={{ duration: 1.4, ease: "easeInOut" }}
+                                />
+                                <motion.circle
+                                    cx="50"
+                                    cy="53"
+                                    r="5.5"
+                                    fill="#10b981"
+                                    initial={{ opacity: 0, scale: 0 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: 0.8, duration: 0.5, ease: "easeOut" }}
+                                />
+                            </svg>
+                        </motion.div>
+
+                        {/* Modern Sentence Case with Premium Gradient */}
                         <motion.h1
                             initial={{
                                 opacity: 0,
-                                scale: 0.8,
-                                filter: "blur(12px)",
-                                rotateX: 20,
-                                y: 50
+                                scale: 0.96,
+                                filter: "blur(4px)",
+                                y: 8
                             }}
                             animate={{
                                 opacity: 1,
                                 scale: 1,
                                 filter: "blur(0px)",
-                                rotateX: 0,
                                 y: 0
                             }}
                             transition={{
-                                duration: 1.8,
-                                ease: [0.22, 1, 0.36, 1]
+                                duration: 1.2,
+                                ease: [0.16, 1, 0.3, 1],
+                                delay: 0.2
                             }}
-                            className="text-6xl md:text-8xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-[#10b981] to-[#34d399] relative z-10"
-                            style={{
-                                textShadow: "0 20px 50px rgba(16, 185, 129, 0.3), 0 0 20px rgba(16, 185, 129, 0.1)"
-                            }}
+                            className="text-4xl md:text-5xl font-bold tracking-[-0.02em] text-transparent bg-clip-text bg-gradient-to-r from-[#ffffff] via-[#34d399] to-[#22d3ee] text-center select-none"
                         >
-                            VEONIX
+                            Veonix
                         </motion.h1>
-
-                        {/* Reflection / Floor Shadow */}
-                        <motion.div
-                            initial={{ opacity: 0, scaleX: 0.5 }}
-                            animate={{ opacity: 0.3, scaleX: 1 }}
-                            transition={{ duration: 2, delay: 0.5 }}
-                            className="absolute -bottom-8 left-0 right-0 h-4 bg-emerald-500/30 blur-xl rounded-[100%]"
-                        />
                     </div>
 
-                    {/* Subtle details */}
+                    {/* Minimalist Subtitle */}
                     <motion.div
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1, duration: 1 }}
-                        className="absolute bottom-10 text-emerald-500/40 text-xs tracking-[0.5em] font-light uppercase"
+                        animate={{ opacity: 0.35 }}
+                        transition={{ delay: 0.7, duration: 1.2 }}
+                        className="absolute bottom-12 text-slate-400 text-[10px] tracking-[0.6em] font-medium uppercase select-none"
                     >
                         Visual Intelligence
                     </motion.div>
-
                 </motion.div>
             )}
         </AnimatePresence>

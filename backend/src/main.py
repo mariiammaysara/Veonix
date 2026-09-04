@@ -19,6 +19,8 @@ from src.controllers.health import router as health_router
 from src.middleware.request_id import RequestIdMiddleware
 from src.middleware.request_logger import RequestLoggerMiddleware
 from src.middleware.timing import TimingMiddleware
+from src.enums.error_codes import ErrorCode
+from src.controllers.analyze import error_response
 from src.db.database import init_db
 
 logger = logging.getLogger(__name__)
@@ -65,3 +67,11 @@ app.add_middleware(RequestIdMiddleware)
 # analyze_router handles core business logic; health_router for infrastructure checks
 app.include_router(analyze_router)
 app.include_router(health_router)
+
+
+# Global Unhandled Exception Handler
+# Catches unexpected failures, logs them, and returns a JSON response with CORS headers.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc: Exception):
+    logger.exception(f"Unhandled exception caught globally: {exc}")
+    return error_response(ErrorCode.INTERNAL_ERROR, detail=str(exc))

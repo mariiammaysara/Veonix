@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     """
     # ── Gemini Configuration ──────────────────────────────────
     GEMINI_API_KEY: str = ""
+    # Multimodal model used for vision/image analysis
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
     # ── Database Configuration ────────────────────────────────
@@ -33,3 +34,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

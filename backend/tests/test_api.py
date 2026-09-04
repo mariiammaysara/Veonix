@@ -23,5 +23,5 @@ def test_analyze_rejects_bad_content_type():
         "/analyze/image",
         files={"file": ("test.txt", b"not an image", "text/plain")},
     )
-    assert response.status_code == 400
+    assert response.status_code == 415
     assert "JPEG" in response.json()["error"]["message"]

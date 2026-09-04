@@ -23,4 +23,5 @@ COPY . .
 EXPOSE 8000
 
 # Command to run the application
+# Schema is created directly on startup (see src/db/database.py:init_db) — no migrations needed.
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

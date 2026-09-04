@@ -11,6 +11,7 @@ import type {
   MealHistoryResponse,
   StatsResponse,
   ApiErrorResponse,
+  BatchResult,
 } from "./types";
 
 const BASE_URL =
@@ -60,7 +61,59 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export async function analyzeImage(file: File): Promise<MealResult> {
   const form = new FormData();
   form.append("file", file);
-  return request<MealResult>("/analyze/image", { method: "POST", body: form });
+
+  const response = await fetch(`${BASE_URL}/analyze/image`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!response.ok) {
+    let errorBody: ApiErrorResponse | null = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      // ignore
+    }
+    const message = errorBody?.error?.message ?? "An unexpected error occurred.";
+    const code = errorBody?.error?.code ?? "UNKNOWN_ERROR";
+    throw new ApiError(message, response.status, code);
+  }
+
+  const body = await response.json();
+  return body.data as MealResult;
+}
+
+/**
+ * analyzeBatch — uploads N images in parallel for batch analysis.
+ *
+ * POST /analyze/images/batch with all files as FormData entries.
+ * Returns per-meal results and aggregated nutrition totals.
+ */
+export async function analyzeBatch(files: File[]): Promise<BatchResult> {
+  const form = new FormData();
+  for (const file of files) {
+    form.append("files", file);
+  }
+
+  const response = await fetch(`${BASE_URL}/analyze/images/batch`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!response.ok) {
+    let errorBody: ApiErrorResponse | null = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      // ignore
+    }
+    const message = errorBody?.error?.message ?? "Batch analysis failed.";
+    const code = errorBody?.error?.code ?? "UNKNOWN_ERROR";
+    throw new ApiError(message, response.status, code);
+  }
+
+  const body = await response.json();
+  return body.data as BatchResult;
 }
 
 export async function getMealHistory(

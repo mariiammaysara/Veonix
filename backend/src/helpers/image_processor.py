@@ -16,8 +16,9 @@ from src.exceptions import ImageProcessingError
 
 logger = logging.getLogger(__name__)
 
-# Max dimension (width or height) to prevent excessive bandwidth usage
-MAX_DIMENSION = 1200
+# Max dimension (width or height) — 800px is sufficient for Gemini food analysis
+# and reduces visual token count vs the previous 1200px limit.
+MAX_DIMENSION = 800
 # 85 is the sweet spot: high visual quality for AI with ~40% smaller file size
 JPEG_QUALITY = 85
 
@@ -50,8 +51,7 @@ def compress_image(image_bytes: bytes) -> bytes:
                 logger.debug(f"Resized image from {width}x{height} to {new_size[0]}x{new_size[1]}")
 
             output = io.BytesIO()
-            # optimize=True reduces file size further without quality loss.
-            img.save(output, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+            img.save(output, format="JPEG", quality=JPEG_QUALITY)
             return output.getvalue()
 
     except Exception as e:

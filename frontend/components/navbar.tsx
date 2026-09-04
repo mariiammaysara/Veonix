@@ -1,22 +1,33 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Upload, Clock } from "lucide-react";
+import { Home, Upload, Clock, Settings } from "lucide-react";
 
 /**
  * Veonix — Shared Navbar Component
  * 
- * Implements a floating, pill-style navigation with a glassmorphic background.
+ * Implements a fixed, pill-style navigation with a glassmorphic background that shrinks and blurs on scroll.
  * Optimized for perfect centering using a 3-column grid layout.
  */
 export default function Navbar() {
   const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const NAV_LINKS = [
     { label: "Home", href: "/", icon: Home },
     { label: "Upload", href: "/dashboard/upload", icon: Upload },
     { label: "History", href: "/dashboard/history", icon: Clock },
+    { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
   return (
@@ -25,9 +36,12 @@ export default function Navbar() {
       gridTemplateColumns: "1fr auto 1fr",
       alignItems: "center",
       padding: "0 clamp(20px, 4vw, 48px)",
-      height: "80px",
-      background: "transparent",
-      position: "absolute",
+      height: scrolled ? "64px" : "80px",
+      background: scrolled ? "rgba(2, 6, 23, 0.75)" : "transparent",
+      backdropFilter: scrolled ? "blur(12px)" : "none",
+      borderBottom: scrolled ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid transparent",
+      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      position: "fixed",
       top: 0,
       left: 0,
       right: 0,

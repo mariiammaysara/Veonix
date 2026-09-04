@@ -11,6 +11,8 @@ services:
       - DATABASE_URL=sqlite:///./veonix.db
     volumes:
       - ./backend/veonix.db:/app/veonix.db
+    networks:
+      - default
 
   frontend:
     build:
@@ -18,11 +20,13 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-        - GEMINI_API_KEY=${GEMINI_API_KEY}
-        - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - backend
+
+networks:
+  default:
+    driver: bridge

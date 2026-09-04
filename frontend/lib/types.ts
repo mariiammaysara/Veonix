@@ -33,6 +33,7 @@ export interface MealResult {
     meal_type: string;
     cuisine: string;
     nutrition: NutritionData;
+    allergies_warning?: string | null;
 }
 
 export interface MealHistoryItem {
@@ -67,4 +68,28 @@ export interface ApiErrorResponse {
         message: string;
         detail: string;
     };
+}
+
+// Local-only preference note, kept in the browser (no backend profile system).
+export interface LocalPreferences {
+    dietary_goal: string;
+    allergies: string[];
+}
+
+export interface BatchMealResult extends MealResult {
+    allergies_warning?: string | null;
+}
+
+export interface BatchAggregate {
+    total_calories: number;
+    total_protein: number;
+    total_carbs: number;
+    total_fat: number;
+    total_fiber: number;
+    total_sodium: number;
+}
+
+export interface BatchResult {
+    meals: (BatchMealResult | null)[];
+    aggregate: BatchAggregate;
 }
