@@ -38,9 +38,11 @@ class GeminiProvider:
         - response_parser helpers
     """
 
-    def __init__(self):
+    @property
+    def client(self) -> genai.Client:
+        """Resolves the shared Gemini client lazily, on first real use."""
         from src.providers.vision.factory import get_gemini_client
-        self.client = get_gemini_client()
+        return get_gemini_client()
 
     async def analyze(self, image_bytes: bytes, prompt: Optional[str] = None) -> VisionResult:
         """

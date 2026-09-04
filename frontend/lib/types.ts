@@ -33,7 +33,6 @@ export interface MealResult {
     meal_type: string;
     cuisine: string;
     nutrition: NutritionData;
-    allergies_warning?: string | null;
 }
 
 export interface MealHistoryItem {
@@ -77,7 +76,9 @@ export interface LocalPreferences {
 }
 
 export interface BatchMealResult extends MealResult {
-    allergies_warning?: string | null;
+    // False when confidence was below the persistence threshold — the meal
+    // is shown here but was NOT saved to history.
+    persisted: boolean;
 }
 
 export interface BatchAggregate {

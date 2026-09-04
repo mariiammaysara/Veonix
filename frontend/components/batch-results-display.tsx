@@ -159,8 +159,10 @@ function MealRow({ meal, index }: { meal: BatchMealResult | null; index: number 
             {meal.confidence ? `${(meal.confidence * 100).toFixed(0)}% confidence` : ""}
           </span>
         </div>
-        {meal.allergies_warning && (
-          <p style={{ fontSize: "11px", color: "#fbbf24", marginTop: "3px" }}>{meal.allergies_warning}</p>
+        {!meal.persisted && (
+          <p style={{ fontSize: "11px", color: "#fbbf24", marginTop: "3px" }}>
+            Not saved to history — confidence too low
+          </p>
         )}
       </div>
 

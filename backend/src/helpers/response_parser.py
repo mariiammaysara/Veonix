@@ -35,8 +35,12 @@ def parse_gemini_response(raw: str) -> VisionResult:
         VisionProviderError: If the JSON is unparseable or critical fields are missing.
     """
     try:
-        # LLMs often wrap JSON in triple backticks even when told not to.
-        clean = raw.strip().removeprefix("```json").removesuffix("```").strip()
+        # LLMs often wrap JSON in triple backticks even when told not to,
+        # sometimes with a language tag (```json) and sometimes without (```).
+        clean = raw.strip()
+        if clean.startswith("```"):
+            clean = clean.removeprefix("```json").removeprefix("```")
+        clean = clean.removesuffix("```").strip()
         data = json.loads(clean)
     except json.JSONDecodeError as e:
         logger.error(f"JSON parse failed: {e} | Raw: {raw[:200]}")

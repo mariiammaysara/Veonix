@@ -8,9 +8,11 @@ services:
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
-      - DATABASE_URL=sqlite:///./veonix.db
+      - DATABASE_URL=sqlite:///./data/veonix.db
     volumes:
-      - ./backend/veonix.db:/app/veonix.db
+      # Mount a directory, not the db file itself — a missing file path here
+      # would make Docker create it as a directory on first run and break SQLite.
+      - ./backend/data:/app/data
     networks:
       - default
 

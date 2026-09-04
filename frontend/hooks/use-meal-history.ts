@@ -42,7 +42,7 @@ export function useMealHistory() {
             setMeals((prev) => prev.filter((m) => m.id !== id));
             setTotal((prev) => prev - 1);
         } catch {
-            // silently fail — meal stays in list
+            setError("Failed to delete meal. Please try again.");
         }
     }, []);
 

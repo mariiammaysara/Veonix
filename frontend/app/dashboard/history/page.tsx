@@ -13,7 +13,7 @@ import type { MealHistoryItem } from "@/lib/types";
  * Optimized for vertical spacing to prevent navbar overlap.
  */
 export default function HistoryPage() {
-  const { meals, total, loading, handleDelete } = useMealHistory();
+  const { meals, total, loading, error, handleDelete } = useMealHistory();
 
   return (
     <div style={{ minHeight: "100vh", background: "#020617", color: "#f1f5f9", display: "flex", flexDirection: "column", position: "relative", overflowX: "hidden" }}>
@@ -38,6 +38,16 @@ export default function HistoryPage() {
             {total} meal{total !== 1 ? "s" : ""} tracked so far
           </p>
         </div>
+
+        {error && (
+          <div style={{
+            padding: "10px 16px", background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.15)", borderRadius: "10px",
+            color: "#f87171", fontSize: "13px", fontWeight: 500,
+          }}>
+            {error}
+          </div>
+        )}
 
         {/* Grid Wrapper */}
         {loading ? (
