@@ -179,8 +179,40 @@ export default function Home() {
                 border: "1px solid rgba(255,255,255,0.04)"
               }}>
                 <div className="scan-line" />
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-                  <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
+                <svg width="100%" height="100%" viewBox="0 0 200 160" fill="none" style={{ position: "absolute", inset: 0 }}>
+                  {/* Plate */}
+                  <ellipse cx="100" cy="80" rx="94" ry="68" fill="rgba(255,255,255,0.035)" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" />
+                  <ellipse cx="100" cy="80" rx="74" ry="52" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+
+                  {/* Asparagus spears (behind the fillet) */}
+                  <g strokeLinecap="round">
+                    <path d="M120 108l18-40" stroke="#34d399" strokeWidth="5" />
+                    <path d="M130 112l16-42" stroke="#34d399" strokeWidth="5" />
+                    <path d="M140 116l14-40" stroke="#34d399" strokeWidth="5" />
+                    <path d="M138 68l4 8-8 2z" fill="#34d399" stroke="none" />
+                    <path d="M148 66l4 8-8 2z" fill="#34d399" stroke="none" />
+                    <path d="M156 68l4 8-8 2z" fill="#34d399" stroke="none" />
+                  </g>
+
+                  {/* Salmon fillet */}
+                  <path
+                    d="M52 78c-2-18 16-34 40-34 22 0 42 12 46 30 4 17-10 34-34 38-24 4-50-14-52-34z"
+                    fill="#fb7654" fillOpacity="0.85" stroke="#fdba8c" strokeWidth="1.5" strokeLinejoin="round"
+                  />
+                  <path
+                    d="M60 70c8 4 14 12 16 22M74 60c10 4 18 14 20 26M90 56c10 5 18 16 19 28M106 58c8 6 14 15 14 24"
+                    stroke="#fff7ed" strokeOpacity="0.35" strokeWidth="1.5" strokeLinecap="round"
+                  />
+
+                  {/* Lemon wedge */}
+                  <path d="M44 118a18 18 0 0 1 26-26z" fill="#fde047" fillOpacity="0.9" stroke="#fef08a" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M49 113a11 11 0 0 1 14-14" stroke="#fef9c3" strokeOpacity="0.8" strokeWidth="1" />
+                  <path d="M46 116l3-3M50 120l3-3M54 124l3-3" stroke="#fef08a" strokeOpacity="0.6" strokeWidth="1" />
+
+                  {/* Herb garnish */}
+                  <circle cx="90" cy="48" r="2.2" fill="#4ade80" />
+                  <circle cx="100" cy="44" r="1.8" fill="#4ade80" fillOpacity="0.85" />
+                  <circle cx="80" cy="46" r="1.6" fill="#4ade80" fillOpacity="0.8" />
                 </svg>
               </div>
 
