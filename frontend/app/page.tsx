@@ -6,14 +6,6 @@ import Link from "next/link";
 import IntroScreen from "@/components/IntroScreen";
 import Navbar from "@/components/navbar";
 
-// TODO: replace with real values once tracked (see analytics/usage data)
-const STATS = [
-  { value: "—", label: "Meals Logged", color: "#34d399" },
-  { value: "—", label: "Accuracy Rate", color: "#38bdf8" },
-  { value: "—", label: "Average Analysis", color: "#34d399" },
-  { value: "—", label: "Privacy Protection", color: "#fb7185" }
-];
-
 export default function Home() {
   const [showContent, setShowContent] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -233,7 +225,7 @@ export default function Home() {
 
       {/* ── 2. How It Works ── */}
       <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)", position: "relative", overflow: "hidden" }}>
-        
+
         {/* Subtle background radial glow */}
         <div style={{
           position: "absolute",
@@ -248,44 +240,30 @@ export default function Home() {
           zIndex: 0
         }} />
 
-        <div style={{ width: "100%", maxWidth: "980px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
-          
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: "8px" }}>How It Works</span>
-            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>From plate to macros in three steps</h2>
+        <div style={{ width: "100%", maxWidth: "840px", margin: "0 auto", padding: "96px 24px", position: "relative", zIndex: 1 }}>
+
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: "10px" }}>How it works</span>
+            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>From plate to macros, in three steps</h2>
           </div>
 
-          <div style={{ gap: "24px", position: "relative" }} className="grid grid-cols-1 md:grid-cols-3">
-            
-            {/* Connecting line */}
-            <div style={{
-              position: "absolute",
-              top: "50px",
-              left: "15%",
-              right: "15%",
-              height: "2px",
-              background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.15) 20%, rgba(52,211,153,0.15) 80%, transparent)",
-              zIndex: 0
-            }} className="hidden md:block" />
-
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "4px" }}>
             {[
               {
-                step: "01",
                 title: "Snap a photo",
-                desc: "Take or upload a picture of a meal from any device.",
+                desc: "Upload a picture of your meal from any device.",
                 icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
                 )
               },
               {
-                step: "02",
-                title: "Gemini Vision analyzes it",
+                title: "AI analyzes it",
                 desc: "Identifies the food and estimates calories, protein, carbs, and fat.",
                 icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" />
                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                     <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -293,11 +271,10 @@ export default function Home() {
                 )
               },
               {
-                step: "03",
                 title: "Track it over time",
-                desc: "Every analyzed meal is automatically logged to your dashboard database.",
+                desc: "Every meal is logged automatically to your history.",
                 icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                     <line x1="16" y1="2" x2="16" y2="6" />
                     <line x1="8" y1="2" x2="8" y2="6" />
@@ -305,25 +282,24 @@ export default function Home() {
                   </svg>
                 )
               }
-            ].map((st, i) => (
-              <div key={st.step} className="card-hover" style={{
-                background: "rgba(20,32,58,0.6)", border: "1px solid rgba(16,185,129,0.1)",
-                borderRadius: "16px", padding: "28px 24px", backdropFilter: "blur(8px)",
-                position: "relative", zIndex: 1
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+            ].map((st, i, arr) => (
+              <div key={st.title}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "20px", padding: "20px 4px" }}>
                   <div style={{
-                    width: "52px", height: "52px", borderRadius: "14px",
-                    background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    position: "relative", zIndex: 2
+                    flexShrink: 0, width: "40px", height: "40px", borderRadius: "50%",
+                    background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)",
+                    display: "flex", alignItems: "center", justifyContent: "center"
                   }}>
                     {st.icon}
                   </div>
-                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#475569" }}>{st.step}</span>
+                  <div style={{ flex: 1, minWidth: 0, paddingTop: "2px" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#f1f5f9", margin: "0 0 4px" }}>{st.title}</h3>
+                    <p style={{ fontSize: "14px", color: "#64748b", margin: 0, lineHeight: 1.5 }}>{st.desc}</p>
+                  </div>
                 </div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#f1f5f9", marginBottom: "8px" }}>{st.title}</h3>
-                <p style={{ fontSize: "13px", color: "#64748b", lineHeight: 1.5 }}>{st.desc}</p>
+                {i < arr.length - 1 && (
+                  <div style={{ width: "1px", height: "24px", background: "rgba(52,211,153,0.15)", marginLeft: "20px" }} />
+                )}
               </div>
             ))}
           </div>
@@ -331,154 +307,65 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 3. Features ── */}
-      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)", position: "relative", overflow: "hidden" }}>
-        
-        {/* Subtle background radial glow */}
+      {/* ── 3. Trust badges ── */}
+      <section style={{ width: "100%" }}>
         <div style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "800px",
-          height: "450px",
-          background: "radial-gradient(circle, rgba(56,189,248,0.02) 0%, rgba(16,185,129,0.005) 50%, transparent 70%)",
-          filter: "blur(70px)",
-          pointerEvents: "none",
-          zIndex: 0
-        }} />
-
-        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
-          
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: "8px" }}>Why Veonix</span>
-            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>Built to be quick, accurate, and yours</h2>
-          </div>
-
-          <div style={{ gap: "24px" }} className="grid grid-cols-1 md:grid-cols-3">
-            {[
-              {
-                title: "Fast Analysis",
-                sub: "Analyze meals in less than 2 seconds.",
-                color: "#34d399",
-                bg: "rgba(52,211,153,0.08)",
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                  </svg>
-                )
-              },
-              {
-                title: "AI Powered",
-                sub: "Powered by Gemini Vision.",
-                color: "#38bdf8",
-                bg: "rgba(56,189,248,0.08)",
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="4" y="4" width="16" height="16" rx="2" />
-                    <path d="M9 9h6v6H9zM9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3" />
-                  </svg>
-                )
-              },
-              {
-                title: "Privacy First",
-                sub: "Images are processed securely.",
-                color: "#34d399",
-                bg: "rgba(52,211,153,0.08)",
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                )
-              }
-            ].map((ft) => (
-              <div key={ft.title} className="card-hover" style={{
-                background: "rgba(20,32,58,0.6)", border: "1px solid rgba(16,185,129,0.1)",
-                borderRadius: "16px", padding: "32px 24px", display: "flex", flexDirection: "column",
-                alignItems: "center", gap: "12px", position: "relative", overflow: "hidden", backdropFilter: "blur(8px)"
-              }}>
-                <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: "1px", background: `linear-gradient(90deg, transparent, ${ft.color}, transparent)` }} />
-                <div style={{
-                  width: "52px", height: "52px", borderRadius: "14px",
-                  background: ft.bg, border: `1px solid ${ft.color}25`,
-                  display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "4px"
-                }}>
-                  {ft.icon}
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "16px", fontWeight: 700, color: ft.color, letterSpacing: ".02em" }}>{ft.title}</div>
-                  <div style={{ fontSize: "13px", color: "#64748b", marginTop: "6px", lineHeight: 1.5 }}>{ft.sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
+          width: "100%", maxWidth: "700px", margin: "0 auto",
+          display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center",
+          gap: "12px 32px", padding: "24px 20px",
+          borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)"
+        }}>
+          {[
+            {
+              label: "Analysis in seconds",
+              color: "#34d399",
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+              )
+            },
+            {
+              label: "Powered by advanced AI vision",
+              color: "#38bdf8",
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <path d="M9 9h6v6H9z" />
+                </svg>
+              )
+            },
+            {
+              label: "Photos aren't stored",
+              color: "#34d399",
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              )
+            }
+          ].map((b) => (
+            <div key={b.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {b.icon}
+              <span style={{ fontSize: "13px", color: "#94a3b8" }}>{b.label}</span>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ── 9. Statistics Section ── */}
-      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)", position: "relative", overflow: "hidden" }}>
-        
-        {/* Subtle background radial glow */}
-        <div style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "700px",
-          height: "400px",
-          background: "radial-gradient(circle, rgba(16,185,129,0.02) 0%, rgba(56,189,248,0.005) 50%, transparent 70%)",
-          filter: "blur(60px)",
-          pointerEvents: "none",
-          zIndex: 0
-        }} />
-
-        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "60px 24px", position: "relative", zIndex: 1 }}>
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: "8px" }}>Veonix by the numbers</span>
-            <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#f1f5f9" }}>Proven performance, complete security</h2>
-          </div>
-
-          <div style={{ gap: "24px" }} className="grid grid-cols-2 lg:grid-cols-4">
-            {STATS.map((stat, i) => (
-              <div key={stat.label} className="card-hover" style={{
-                background: "rgba(20,32,58,0.6)", border: "1px solid rgba(255,255,255,0.04)",
-                borderRadius: "16px", padding: "32px 20px", display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center", gap: "8px", backdropFilter: "blur(8px)"
-              }}>
-                <span style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 800, color: stat.color, letterSpacing: "-1px" }}>{stat.value}</span>
-                <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>{stat.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5. Final CTA ── */}
-      <section style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.03)" }}>
-        <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto", padding: "60px 24px" }}>
-          
-          <div className="anim-scale-in" style={{
-            width: "100%", maxWidth: "800px", margin: "0 auto",
-            background: "linear-gradient(135deg, rgba(16,185,129,0.04), rgba(56,189,248,0.04))",
-            border: "1px solid rgba(52,211,153,0.12)", borderRadius: "24px", padding: "48px 32px",
-            textAlign: "center", position: "relative", overflow: "hidden", boxShadow: "0 12px 32px rgba(0,0,0,0.2)"
-          }}>
-            {/* Soft internal gradient background glow */}
-            <div style={{ position: "absolute", top: "-50px", left: "-50px", width: "100px", height: "100px", background: "rgba(16,185,129,0.06)", borderRadius: "50%", filter: "blur(40px)" }} />
-            
-            <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#f1f5f9", marginBottom: "8px" }}>Start tracking your nutrition with AI.</h2>
-            <p style={{ fontSize: "14px", color: "#64748b", maxWidth: "440px", margin: "0 auto 28px", lineHeight: 1.5 }}>
-              Upload your first meal in seconds.
-            </p>
-            <Link href="/dashboard/upload" className="btn-glow" style={{
-              display: "inline-block", padding: "14px 36px", background: "#10b981", border: "none", borderRadius: "99px",
-              color: "#020617", fontSize: "14px", fontWeight: 700, textDecoration: "none", transition: "all .15s",
-              boxShadow: "0 4px 20px rgba(16, 185, 129, 0.2)"
-            }}>Analyze My Meal →</Link>
-          </div>
-
+      {/* ── 4. Final CTA ── */}
+      <section style={{ width: "100%" }}>
+        <div style={{ width: "100%", maxWidth: "640px", margin: "0 auto", padding: "80px 24px", textAlign: "center" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#f1f5f9", marginBottom: "8px" }}>Start tracking your nutrition with AI.</h2>
+          <p style={{ fontSize: "14px", color: "#64748b", margin: "0 auto 28px", lineHeight: 1.5 }}>
+            Upload your first meal in seconds.
+          </p>
+          <Link href="/dashboard/upload" className="btn-glow" style={{
+            display: "inline-block", padding: "14px 36px", background: "#10b981", border: "none", borderRadius: "99px",
+            color: "#020617", fontSize: "14px", fontWeight: 700, textDecoration: "none", transition: "all .15s",
+            boxShadow: "0 4px 20px rgba(16, 185, 129, 0.2)"
+          }}>Analyze My Meal →</Link>
         </div>
       </section>
 
