@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     # ── Gemini Configuration ──────────────────────────────────
     GEMINI_API_KEY: str = ""
     # Multimodal model used for vision/image analysis
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    # "gemini-flash-latest" is a Google-maintained alias that always points to
+    # the current stable Flash model, so it doesn't need bumping when a
+    # pinned version (like gemini-2.5-flash) gets deprecated or overloaded.
+    GEMINI_MODEL: str = "gemini-flash-latest"
 
     # ── Database Configuration ────────────────────────────────
     DATABASE_URL: str = "sqlite:///./veonix.db"

@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Python-3.11%2B-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/FastAPI-0.116-009688.svg" alt="FastAPI">
   <img src="https://img.shields.io/badge/Next.js-16.3-000000.svg" alt="Next.js">
-  <img src="https://img.shields.io/badge/Gemini-2.5%20Flash-4285F4.svg" alt="Gemini">
+  <img src="https://img.shields.io/badge/Gemini-Flash-4285F4.svg" alt="Gemini">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
 </p>
 
@@ -41,7 +41,7 @@ The project is a FastAPI backend around a single Gemini vision call, paired with
 
 ## Overview
 
-Veonix is a simple web application that helps you track your daily nutrition. You can upload a photo of your meal, and the AI (Google Gemini 2.5 Flash) will automatically identify the food and calculate its calories, protein, carbs, and fat.
+Veonix is a simple web application that helps you track your daily nutrition. You can upload a photo of your meal, and the AI (Google Gemini Flash) will automatically identify the food and calculate its calories, protein, carbs, and fat.
 
 You can also upload several photos at once for a quick batch analysis (each image is analyzed in parallel, with totals aggregated across the batch), and every analyzed meal is saved to your history with simple aggregate stats.
 
@@ -105,7 +105,7 @@ Batch uploads (`POST /analyze/images/batch`) run the same per-image pipeline con
 | :--- | :--- | :--- |
 | **Frontend UI** | Next.js, Tailwind, Framer Motion | Image upload (single & batch), macro ratio charts, history view |
 | **Backend API** | FastAPI, Pydantic v2, Pillow | Endpoint routing, CORS validation, and image compression |
-| **Vision Pipeline** | Google Gemini 2.5 Flash | Single multimodal call per image: food identification + nutrition estimate |
+| **Vision Pipeline** | Google Gemini Flash | Single multimodal call per image: food identification + nutrition estimate |
 | **Database** | SQLite, SQLAlchemy | Meal storage, history, and aggregate stats (schema created directly on startup, no migrations) |
 
 ---
@@ -118,7 +118,7 @@ This project is divided into two main parts: the backend API and the frontend we
 
 * **FastAPI** — High-performance Python web framework.
 
-* **Google Gemini 2.5 Flash** — Multimodal AI used to identify foods and estimate weights and nutrition in a single call.
+* **Google Gemini Flash** — Multimodal AI used to identify foods and estimate weights and nutrition in a single call.
 
 * **SQLite with SQLAlchemy** — Saves meals and history using the Repository Pattern (Controllers → Services → Providers → Repositories).
 
